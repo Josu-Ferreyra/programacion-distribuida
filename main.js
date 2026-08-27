@@ -9,7 +9,18 @@ import { USERS } from "./mocks/users.js";
 import dotenv from "dotenv";
 import fs from "fs";
 import https from "https";
-import { delay } from "./utils/helpers.js";
+import { delay, releaseLock } from "./utils/helpers.js";
+import { createClient } from "redis";
+
+const redisClient = createClient({
+  url: process.env.REDIS_URL,
+});
+
+redisClient.on("error", (err) => console.log("Redis Client Error", err));
+
+await redisClient.connect();
+
+console.log("Redis client connected successfully");
 
 dotenv.config();
 
@@ -123,16 +134,38 @@ app.post("/api/users/:id/savings", async (req, res) => {
     return res.status(400).json({ error: "Amount must be a number" });
   }
 
-  const currentSavings = USERS[userIndex].savings;
+  const userId = USERS[userIndex].id;
+  const lockKey = `lock:users:${userId}`;
+  const lockValue = crypto.randomUUID();
 
-  await delay(10000); // Uso un delay largo para que me de tiempo a hacer la prueba de concurrencia
-
-  USERS[userIndex].savings = currentSavings + amount;
-
-  res.status(200).json({
-    message: "Savings updated successfully",
-    savings: USERS[userIndex].savings,
+  const acquired = await redisClient.set(lockKey, lockValue, {
+    NX: true,
+    PX: 6000,
   });
+
+  if (!acquired) {
+    return res.status(409).json({
+      error:
+        "Could not acquire lock for user savings update. Please try again later.",
+    });
+  }
+
+  try {
+    const currentSavings = USERS[userIndex].savings;
+
+    await delay(3000); // Uso un delay largo para que me de tiempo a hacer la prueba de concurrencia
+
+    USERS[userIndex].savings = currentSavings + amount;
+
+    res.status(200).json({
+      message: "Savings updated successfully",
+      savings: USERS[userIndex].savings,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error" });
+  } finally {
+    await releaseLock(redisClient, lockKey, lockValue);
+  }
 });
 
 https.createServer(httpConfig, app).listen(PORT, () => {
