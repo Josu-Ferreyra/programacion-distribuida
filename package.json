@@ -1,0 +1,21 @@
+{
+  "name": "api_rest",
+  "version": "1.0.0",
+  "description": "API Rest para Programación Concurrente",
+  "keywords": [
+    "api",
+    "rest",
+    "crud"
+  ],
+  "license": "ISC",
+  "author": "Josué Ferreyra Tica",
+  "type": "module",
+  "main": "main.js",
+  "scripts": {
+    "start": "node --watch main.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
