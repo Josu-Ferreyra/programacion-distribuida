@@ -9,6 +9,7 @@ import { USERS } from "./mocks/users.js";
 import dotenv from "dotenv";
 import fs from "fs";
 import https from "https";
+import { delay } from "./utils/helpers.js";
 
 dotenv.config();
 
@@ -106,6 +107,32 @@ app.delete("/api/users/:id", (req, res) => {
   const deletedUser = USERS.splice(userIndex, 1);
 
   res.status(204).json(deletedUser[0]);
+});
+
+app.post("/api/users/:id/savings", async (req, res) => {
+  let userIndex;
+
+  try {
+    userIndex = validateId(req.params.id);
+  } catch (error) {
+    return res.status(404).json({ error: error.message });
+  }
+
+  const { amount } = req.body;
+  if (typeof amount !== "number") {
+    return res.status(400).json({ error: "Amount must be a number" });
+  }
+
+  const currentSavings = USERS[userIndex].savings;
+
+  await delay(10000); // Uso un delay largo para que me de tiempo a hacer la prueba de concurrencia
+
+  USERS[userIndex].savings = currentSavings + amount;
+
+  res.status(200).json({
+    message: "Savings updated successfully",
+    savings: USERS[userIndex].savings,
+  });
 });
 
 https.createServer(httpConfig, app).listen(PORT, () => {
