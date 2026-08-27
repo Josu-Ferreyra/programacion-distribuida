@@ -6,11 +6,21 @@ import {
   validateRequiredFields,
 } from "./utils/validations.js";
 import { USERS } from "./mocks/users.js";
+import dotenv from "dotenv";
+import fs from "fs";
+import https from "https";
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
+
+const httpConfig = {
+  key: fs.readFileSync(process.env.SSL_KEY_PATH),
+  cert: fs.readFileSync(process.env.SSL_CERT_PATH),
+};
 
 // Routes
 app.get("/api/users", (req, res) => {
@@ -98,6 +108,6 @@ app.delete("/api/users/:id", (req, res) => {
   res.status(204).json(deletedUser[0]);
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+https.createServer(httpConfig, app).listen(PORT, () => {
+  console.log(`Server is running on https://localhost:${PORT}`);
 });
