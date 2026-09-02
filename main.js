@@ -1,16 +1,26 @@
-import express from "express";
+import { createClient } from "redis";
+import { releaseLock } from "./utils/helpers.js";
 import {
   validateBodyExists,
   validateExpectedFields,
-  validateId,
   validateRequiredFields,
 } from "./utils/validations.js";
-import { USERS } from "./mocks/users.js";
 import dotenv from "dotenv";
+import express from "express";
 import fs from "fs";
 import https from "https";
-import { delay, releaseLock } from "./utils/helpers.js";
-import { createClient } from "redis";
+import mongoose from "mongoose";
+import { User } from "./models/user.model.js";
+
+dotenv.config();
+
+try {
+  await mongoose.connect(process.env.MONGO_URI);
+  console.log("🍃 MongoDB connected");
+} catch (error) {
+  console.error("❌ Error connecting MongoDB:", error);
+  process.exit(1);
+}
 
 const redisClient = createClient({
   url: process.env.REDIS_URL,
@@ -21,8 +31,6 @@ redisClient.on("error", (err) => console.log("Redis Client Error", err));
 await redisClient.connect();
 
 console.log("Redis client connected successfully");
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -35,23 +43,26 @@ const httpConfig = {
 };
 
 // Routes
-app.get("/api/users", (req, res) => {
-  res.status(200).json(USERS);
+app.get("/api/users", async (req, res) => {
+  const users = await User.find();
+  res.status(200).json(users);
 });
 
-app.get("/api/users/:id", (req, res) => {
-  let userIndex;
-
+app.get("/api/users/:id", async (req, res) => {
   try {
-    userIndex = validateId(req.params.id);
-  } catch (error) {
-    return res.status(404).json({ error: error.message });
-  }
+    const user = await User.findById(req.params.id);
 
-  res.status(200).json(USERS[userIndex]);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.status(200).json(user);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 });
 
-app.post("/api/users", (req, res) => {
+app.post("/api/users", async (req, res) => {
   if (!req.body) {
     return res.status(400).json({ error: "Request body is missing" });
   }
@@ -65,7 +76,6 @@ app.post("/api/users", (req, res) => {
   }
 
   const newUser = {
-    id: crypto.randomUUID(),
     name: req.body.name,
     lastName: req.body.lastName,
     age: req.body.age,
@@ -75,20 +85,15 @@ app.post("/api/users", (req, res) => {
     yearsOfExperience: req.body.yearsOfExperience,
   };
 
-  USERS.push(newUser);
-
-  res.status(201).json(newUser);
+  try {
+    await User.create(newUser);
+    res.status(201).json(newUser);
+  } catch (error) {
+    return res.status(500).json({ error: "Error creating user in database" });
+  }
 });
 
-app.put("/api/users/:id", (req, res) => {
-  let userIndex;
-
-  try {
-    userIndex = validateId(req.params.id);
-  } catch (error) {
-    return res.status(404).json({ error: error.message });
-  }
-
+app.put("/api/users/:id", async (req, res) => {
   try {
     validateBodyExists(req.body);
     validateExpectedFields(req.body);
@@ -96,46 +101,38 @@ app.put("/api/users/:id", (req, res) => {
     return res.status(400).json({ error: error.message });
   }
 
-  const updatedUser = {
-    ...USERS[userIndex],
-    ...req.body,
-  };
+  try {
+    const updatedUser = await User.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    });
 
-  USERS[userIndex] = updatedUser;
+    if (!updatedUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
-  res.status(200).json(updatedUser);
+    res.status(200).json(updatedUser);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
 });
 
-app.delete("/api/users/:id", (req, res) => {
-  let userIndex;
-
+app.delete("/api/users/:id", async (req, res) => {
   try {
-    userIndex = validateId(req.params.id);
+    const deletedUser = await User.findByIdAndDelete(req.params.id);
+    res.status(204).json(deletedUser);
   } catch (error) {
-    return res.status(404).json({ error: error.message });
+    return res.status(500).json({ error: error.message });
   }
-
-  const deletedUser = USERS.splice(userIndex, 1);
-
-  res.status(204).json(deletedUser[0]);
 });
 
 app.post("/api/users/:id/savings", async (req, res) => {
-  let userIndex;
-
-  try {
-    userIndex = validateId(req.params.id);
-  } catch (error) {
-    return res.status(404).json({ error: error.message });
-  }
-
   const { amount } = req.body;
   if (typeof amount !== "number") {
     return res.status(400).json({ error: "Amount must be a number" });
   }
 
-  const userId = USERS[userIndex].id;
-  const lockKey = `lock:users:${userId}`;
+  const lockKey = `lock:users:${req.params.id}:savings`;
   const lockValue = crypto.randomUUID();
 
   const acquired = await redisClient.set(lockKey, lockValue, {
@@ -151,18 +148,18 @@ app.post("/api/users/:id/savings", async (req, res) => {
   }
 
   try {
-    const currentSavings = USERS[userIndex].savings;
+    const currentSavings = await User.findById(req.params.id).select("savings");
 
-    await delay(3000); // Uso un delay largo para que me de tiempo a hacer la prueba de concurrencia
-
-    USERS[userIndex].savings = currentSavings + amount;
+    await User.findByIdAndUpdate(req.params.id, {
+      savings: currentSavings.savings + amount,
+    });
 
     res.status(200).json({
       message: "Savings updated successfully",
-      savings: USERS[userIndex].savings,
+      savings: currentSavings.savings + amount,
     });
   } catch (error) {
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: error.message || "Internal server error" });
   } finally {
     await releaseLock(redisClient, lockKey, lockValue);
   }
