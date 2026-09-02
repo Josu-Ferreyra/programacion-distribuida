@@ -11,6 +11,7 @@ import fs from "fs";
 import https from "https";
 import mongoose from "mongoose";
 import { User } from "./models/user.model.js";
+import { logger } from "./utils/logger.js";
 
 dotenv.config();
 
@@ -41,6 +42,13 @@ const httpConfig = {
   key: fs.readFileSync(process.env.SSL_KEY_PATH),
   cert: fs.readFileSync(process.env.SSL_CERT_PATH),
 };
+
+app.use((req, res, next) => {
+  logger.info(`Solicitud entrante: ${req.method} ${req.originalUrl}`, {
+    ip: req.ip,
+  });
+  next();
+});
 
 // Routes
 app.get("/api/users", async (req, res) => {
@@ -163,6 +171,16 @@ app.post("/api/users/:id/savings", async (req, res) => {
   } finally {
     await releaseLock(redisClient, lockKey, lockValue);
   }
+});
+
+app.use((err, req, res, next) => {
+  logger.error(`Error en la operación: ${err.message}`, {
+    method: req.method,
+    url: req.originalUrl,
+    stack: err.stack,
+  });
+
+  res.status(500).json({ error: "Error interno del servidor" });
 });
 
 https.createServer(httpConfig, app).listen(PORT, () => {
