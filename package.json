@@ -10,9 +10,9 @@
   "license": "ISC",
   "author": "Josué Ferreyra Tica",
   "type": "module",
-  "main": "main.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node --watch main.js",
+    "start": "node --watch server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
