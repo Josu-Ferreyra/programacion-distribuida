@@ -57,9 +57,15 @@ GET lock:users:<ID_DEL_USUARIO>
 SSL_KEY_PATH=certs/key.pem
 SSL_CERT_PATH=certs/cert.pem
 REDIS_URL=redis://localhost:6379
+MONGO_URI=mongodb://localhost:27017/tp_distribuida
 ```
 
-5. La API quedara disponible en:
+5. Correr MongoDB
+```
+sudo systemctl start mongodb
+```
+
+6. La API quedara disponible en:
 
 ```text
 https://localhost:3000
