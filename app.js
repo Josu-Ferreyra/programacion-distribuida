@@ -2,6 +2,7 @@ import express from "express";
 import swaggerUi from "swagger-ui-express";
 import { swaggerDocs } from "./config/swagger.js";
 import userRoutes from "./routes/user.routes.js";
+import raftRoutes from "./routes/raft.routes.js";
 import { errorHandler } from "./middlewares/error-handler.js";
 import { logger } from "./utils/logger.js";
 
@@ -23,6 +24,7 @@ app.use((req, res, next) => {
 
 // 4. Montaje de rutas de la API
 app.use("/api/users", userRoutes);
+app.use("/api/raft", raftRoutes);
 
 // 5. Captura de rutas inexistentes (404)
 app.use((req, res, next) => {

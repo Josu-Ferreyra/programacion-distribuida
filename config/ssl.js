@@ -1,9 +1,7 @@
 import fs from "fs";
 import https from "https";
 
-export function createSSLServer(app) {
-  const PORT = process.env.PORT || 3000;
-
+export function createSSLServer(app, PORT) {
   const httpConfig = {
     key: fs.readFileSync(process.env.SSL_KEY_PATH),
     cert: fs.readFileSync(process.env.SSL_CERT_PATH),

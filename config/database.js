@@ -1,8 +1,12 @@
 import mongoose from "mongoose";
 
-export async function connectDB() {
+export async function connectDB(MONGO_URI) {
   try {
-    await mongoose.connect(process.env.MONGO_URI);
+    if (!MONGO_URI) {
+      throw new Error("MONGO_URI doesn't provided");
+    }
+
+    await mongoose.connect(MONGO_URI);
     console.log("MongoDB connected");
   } catch (error) {
     console.error("Error connecting MongoDB:", error);

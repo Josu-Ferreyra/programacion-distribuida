@@ -13,6 +13,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node --watch server.js",
+    "start:cluster": "node server.js node1 | node server.js node2 | node server.js node3",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
