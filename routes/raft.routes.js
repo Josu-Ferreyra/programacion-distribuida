@@ -28,4 +28,42 @@ const router = Router();
  */
 router.get("/status", RaftController.getStatus);
 
+/**
+ * @openapi
+ * /api/raft/log:
+ *   get:
+ *     summary: Log Raft local con el estado de cada entrada
+ *     description: >
+ *       Cada entrada indica su estado visto desde este nodo: LOCAL (sólo en el Leader),
+ *       REPLICATED (en algún follower, sin mayoría), UNCOMMITTED (en un follower, sin confirmar)
+ *       o COMMITTED (confirmada por mayoría).
+ *     tags:
+ *       - Raft diagnóstico
+ *     parameters:
+ *       - in: query
+ *         name: from
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 100
+ *     responses:
+ *       200:
+ *         description: Entradas del log local
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/RaftLog'
+ *       400:
+ *         description: Parámetros inválidos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+router.get("/log", RaftController.getLog);
+
 export default router;

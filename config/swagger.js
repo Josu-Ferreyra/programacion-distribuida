@@ -1,5 +1,22 @@
 import swaggerJSDoc from "swagger-jsdoc";
 
+const logEntrySchema = {
+  type: "object",
+  properties: {
+    index: { type: "integer", example: 3 },
+    term: { type: "integer", example: 2 },
+    command: {
+      type: "object",
+      example: {
+        type: "CREATE_USER",
+        id: "664c1234567890abcdef1234",
+        data: { name: "Martín" },
+        timestamp: "2026-11-02T12:00:00.000Z",
+      },
+    },
+  },
+};
+
 export function buildSwaggerDocs(nodeConfig) {
   return swaggerJSDoc({
     definition: {
@@ -8,7 +25,7 @@ export function buildSwaggerDocs(nodeConfig) {
         title: `API de Usuarios y Ahorros - cluster Raft (${nodeConfig.id})`,
         version: "2.0.0",
         description:
-          "API de usuarios y ahorros sobre un cluster Raft de 3 nodos. Los endpoints 'Raft diagnóstico' son de sólo lectura.",
+          "API de usuarios y ahorros sobre un cluster Raft de 3 nodos. Los endpoints 'Raft diagnóstico' son de sólo lectura; los 'Raft RPC interno' se sirven por HTTP en el puerto interno de cada nodo.",
       },
       servers: [
         {
@@ -92,9 +109,83 @@ export function buildSwaggerDocs(nodeConfig) {
               },
             },
           },
+          RaftLog: {
+            type: "object",
+            properties: {
+              nodeId: { type: "string" },
+              role: { type: "string" },
+              currentTerm: { type: "integer" },
+              lastLogIndex: { type: "integer" },
+              commitIndex: { type: "integer" },
+              lastApplied: { type: "integer" },
+              entries: {
+                type: "array",
+                items: {
+                  allOf: [
+                    logEntrySchema,
+                    {
+                      type: "object",
+                      properties: {
+                        state: {
+                          type: "string",
+                          enum: ["LOCAL", "REPLICATED", "UNCOMMITTED", "COMMITTED", "APPLIED"],
+                        },
+                        replicatedOn: {
+                          type: "array",
+                          items: { type: "string" },
+                          description: "Sólo en el Leader",
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          RequestVoteRequest: {
+            type: "object",
+            properties: {
+              term: { type: "integer" },
+              candidateId: { type: "string" },
+              lastLogIndex: { type: "integer" },
+              lastLogTerm: { type: "integer" },
+            },
+          },
+          RequestVoteResponse: {
+            type: "object",
+            properties: {
+              term: { type: "integer" },
+              voteGranted: { type: "boolean" },
+              reason: { type: "string" },
+            },
+          },
+          AppendEntriesRequest: {
+            type: "object",
+            properties: {
+              term: { type: "integer" },
+              leaderId: { type: "string" },
+              prevLogIndex: { type: "integer" },
+              prevLogTerm: { type: "integer" },
+              entries: { type: "array", items: logEntrySchema },
+              leaderCommit: { type: "integer" },
+            },
+          },
+          AppendEntriesResponse: {
+            type: "object",
+            properties: {
+              term: { type: "integer" },
+              success: { type: "boolean" },
+              lastLogIndex: { type: "integer" },
+              reason: { type: "string" },
+              matchHint: {
+                type: "integer",
+                description: "En un rechazo, último índice que el follower podría compartir con el Leader",
+              },
+            },
+          },
         },
       },
     },
-    apis: ["./routes/*.js"],
+    apis: ["./routes/*.js", "./raft/rpc-server.js"],
   });
 }
