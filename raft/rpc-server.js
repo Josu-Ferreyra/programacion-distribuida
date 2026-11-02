@@ -43,6 +43,42 @@ export function startRaftRpcServer(raftNode, nodeConfig) {
     }
   });
 
+  /**
+   * @openapi
+   * /raft/append-entries:
+   *   post:
+   *     summary: "[RPC interno] AppendEntries: replicación de log y heartbeat"
+   *     description: >
+   *       RPC interno del protocolo Raft. Con `entries` vacío funciona como heartbeat.
+   *       Servido por HTTP en el puerto interno; no usar como prueba de negocio.
+   *     tags:
+   *       - Raft RPC interno
+   *     servers:
+   *       - url: http://127.0.0.1:4001
+   *       - url: http://127.0.0.1:4002
+   *       - url: http://127.0.0.1:4003
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/AppendEntriesRequest'
+   *     responses:
+   *       200:
+   *         description: Resultado de la verificación de continuidad del log
+   *         content:
+   *           application/json:
+   *             schema:
+   *               $ref: '#/components/schemas/AppendEntriesResponse'
+   */
+  app.post("/raft/append-entries", async (req, res, next) => {
+    try {
+      res.json(await raftNode.handleAppendEntries(req.body));
+    } catch (error) {
+      next(error);
+    }
+  });
+
   app.use((err, req, res, next) => {
     logger.error(`Error en RPC interno ${req.originalUrl}`, { error: err.message });
     res.status(500).json({ error: err.message });

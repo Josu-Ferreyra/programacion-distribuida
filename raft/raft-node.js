@@ -36,7 +36,14 @@ export class RaftNode {
     this.leaderId = null;
     this.electionTimer = null;
     this.electionTimeoutMs = null;
+    this.heartbeatTimer = null;
+    this.lastHeartbeatAt = null;
     this.stopped = false;
+
+    // Accesibilidad de cada follower vista por el Leader.
+    this.peerState = Object.fromEntries(
+      this.peers.map((peer) => [peer.id, { reachable: null }]),
+    );
   }
 
   // ---------------------------------------------------------------- ciclo de vida
@@ -52,6 +59,7 @@ export class RaftNode {
   stop() {
     this.stopped = true;
     clearTimeout(this.electionTimer);
+    clearInterval(this.heartbeatTimer);
   }
 
   // ---------------------------------------------------------------- consultas
@@ -78,9 +86,17 @@ export class RaftNode {
       clusterSize: this.clusterSize,
       quorum: this.quorum,
       electionTimeoutMs: this.isLeader ? null : this.electionTimeoutMs,
+      lastHeartbeatAt: this.lastHeartbeatAt
+        ? new Date(this.lastHeartbeatAt).toISOString()
+        : null,
       apiUrl: this.apiUrl,
       raftUrl: this.raftUrl,
-      peers: this.peers.map(({ id, apiUrl, raftUrl }) => ({ id, apiUrl, raftUrl })),
+      peers: this.peers.map((peer) => ({
+        id: peer.id,
+        apiUrl: peer.apiUrl,
+        raftUrl: peer.raftUrl,
+        ...(this.isLeader ? { reachable: this.peerState[peer.id].reachable } : {}),
+      })),
     };
   }
 
@@ -194,8 +210,6 @@ export class RaftNode {
     });
   }
 
-  // Todavía sin heartbeats: los followers no se enteran del Leader y vuelven a
-  // iniciar elecciones cuando vence su timeout.
   #becomeLeader(votes) {
     this.role = NODE_ROLES.LEADER;
     this.leaderId = this.id;
@@ -206,6 +220,12 @@ export class RaftNode {
       votes,
       quorum: this.quorum,
     });
+
+    this.heartbeatTimer = setInterval(
+      () => this.#broadcastHeartbeat(),
+      this.timing.heartbeatIntervalMs,
+    );
+    setImmediate(() => this.#broadcastHeartbeat());
   }
 
   async #stepDown(newTerm, reason) {
@@ -221,8 +241,10 @@ export class RaftNode {
     this.role = NODE_ROLES.FOLLOWER;
 
     if (previousRole === NODE_ROLES.LEADER) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
       this.#resetElectionTimer();
-      logger.warn("LEADER -> FOLLOWER", { reason });
+      logger.warn("LEADER -> FOLLOWER: se detiene el envío de heartbeats", { reason });
     } else if (previousRole !== NODE_ROLES.FOLLOWER) {
       logger.info(`${previousRole} -> FOLLOWER`, { reason });
     }
@@ -230,5 +252,75 @@ export class RaftNode {
     if (termChanged) {
       logger.info(`Término actualizado ${previousTerm} -> ${newTerm}`, { reason });
     }
+  }
+
+  // ---------------------------------------------------------------- heartbeats
+
+  // AppendEntries sin entradas: el Leader avisa periódicamente que sigue vivo.
+  #broadcastHeartbeat() {
+    if (!this.isLeader) return;
+    for (const peer of this.peers) {
+      this.#sendHeartbeat(peer).catch((error) =>
+        logger.error(`Error enviando heartbeat a ${peer.id}`, { error: error.message }),
+      );
+    }
+  }
+
+  async #sendHeartbeat(peer) {
+    const term = this.currentTerm;
+    logger.debug(`Heartbeat -> ${peer.id}`, { term });
+
+    let response;
+    try {
+      response = await this.rpc.appendEntries(peer, { term, leaderId: this.id, entries: [] });
+      this.#markPeerReachable(peer, true);
+    } catch (error) {
+      this.#markPeerReachable(peer, false, error);
+      return;
+    }
+
+    await this.mutex.run(async () => {
+      if (response.term > this.currentTerm) {
+        await this.#stepDown(response.term, `AppendEntries respondido por ${peer.id}`);
+      }
+    });
+  }
+
+  #markPeerReachable(peer, reachable, error) {
+    const state = this.peerState[peer.id];
+    if (state.reachable === reachable) return;
+    state.reachable = reachable;
+    if (reachable) {
+      logger.info(`Peer ${peer.id} accesible`);
+    } else {
+      logger.warn(`Peer ${peer.id} no responde`, { error: error?.message });
+    }
+  }
+
+  async handleAppendEntries({ term, leaderId }) {
+    return this.mutex.run(async () => {
+      if (term < this.currentTerm) {
+        logger.info(`AppendEntries de ${leaderId} rechazado: término obsoleto`, {
+          term,
+          currentTerm: this.currentTerm,
+        });
+        return { term: this.currentTerm, success: false, reason: "término obsoleto" };
+      }
+
+      // Un Leader válido para un término >= al local: se lo reconoce y se
+      // renueva el election timer. Sólo en este caso se reinicia el timer.
+      if (term > this.currentTerm || this.role !== NODE_ROLES.FOLLOWER) {
+        await this.#stepDown(term, `AppendEntries de ${leaderId}`);
+      }
+      if (this.leaderId !== leaderId) {
+        this.leaderId = leaderId;
+        logger.info(`Leader reconocido: ${leaderId}`, { term });
+      }
+      this.lastHeartbeatAt = Date.now();
+      this.#resetElectionTimer();
+      logger.debug(`Heartbeat <- ${leaderId}`, { term });
+
+      return { term: this.currentTerm, success: true };
+    });
   }
 }

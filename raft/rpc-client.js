@@ -1,4 +1,4 @@
-// Cliente HTTP de los RPC internos de Raft.
+// Cliente HTTP de los RPC internos de Raft (RequestVote / AppendEntries).
 export class RaftRpcClient {
   constructor(timeoutMs) {
     this.timeoutMs = timeoutMs;
@@ -6,6 +6,10 @@ export class RaftRpcClient {
 
   requestVote(peer, request) {
     return this.#post(peer, "request-vote", request);
+  }
+
+  appendEntries(peer, request) {
+    return this.#post(peer, "append-entries", request);
   }
 
   async #post(peer, rpc, body) {
