@@ -1,7 +1,7 @@
 {
   "name": "api_rest",
   "version": "1.0.0",
-  "description": "API Rest para Programación Concurrente",
+  "description": "API REST replicada con Raft (cluster de 3 nodos) - Programación Distribuida TP4",
   "keywords": [
     "api",
     "rest",
@@ -12,9 +12,12 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "start": "node --watch server.js",
-    "start:cluster": "node server.js node1 | node server.js node2 | node server.js node3",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "node1": "node server.js node1",
+    "node2": "node server.js node2",
+    "node3": "node server.js node3",
+    "start:cluster": "node scripts/cluster.js",
+    "status": "node scripts/status.js"
   },
   "dependencies": {
     "dotenv": "^17.4.2",

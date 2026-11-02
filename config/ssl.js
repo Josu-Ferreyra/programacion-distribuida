@@ -1,5 +1,6 @@
 import fs from "fs";
 import https from "https";
+import { logger } from "../utils/logger.js";
 
 export function createSSLServer(app, PORT) {
   const httpConfig = {
@@ -7,7 +8,7 @@ export function createSSLServer(app, PORT) {
     cert: fs.readFileSync(process.env.SSL_CERT_PATH),
   };
 
-  https.createServer(httpConfig, app).listen(PORT, () => {
-    console.log(`Server is running on https://localhost:${PORT}`);
+  return https.createServer(httpConfig, app).listen(PORT, () => {
+    logger.info(`API HTTPS escuchando en https://localhost:${PORT}`);
   });
 }

@@ -1,10 +1,9 @@
-import { NODE } from "../server.js";
+import { getRaftNode } from "../raft/index.js";
 
 export const RaftController = {
   getStatus: (req, res, next) => {
     try {
-      const nodeStatus = NODE.getStatus();
-      res.status(200).json(nodeStatus);
+      res.status(200).json(getRaftNode().getStatus());
     } catch (error) {
       next(error);
     }
