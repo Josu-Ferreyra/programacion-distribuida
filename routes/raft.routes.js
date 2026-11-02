@@ -35,8 +35,8 @@ router.get("/status", RaftController.getStatus);
  *     summary: Log Raft local con el estado de cada entrada
  *     description: >
  *       Cada entrada indica su estado visto desde este nodo: LOCAL (sólo en el Leader),
- *       REPLICATED (en algún follower, sin mayoría), UNCOMMITTED (en un follower, sin confirmar)
- *       o COMMITTED (confirmada por mayoría).
+ *       REPLICATED (en algún follower, sin mayoría), UNCOMMITTED (en un follower, sin confirmar),
+ *       COMMITTED (confirmada por mayoría) o APPLIED (aplicada en la State Machine local).
  *     tags:
  *       - Raft diagnóstico
  *     parameters:

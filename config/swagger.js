@@ -25,7 +25,12 @@ export function buildSwaggerDocs(nodeConfig) {
         title: `API de Usuarios y Ahorros - cluster Raft (${nodeConfig.id})`,
         version: "2.0.0",
         description:
-          "API de usuarios y ahorros sobre un cluster Raft de 3 nodos. Los endpoints 'Raft diagnóstico' son de sólo lectura; los 'Raft RPC interno' se sirven por HTTP en el puerto interno de cada nodo.",
+          "API de negocio replicada con Raft sobre un cluster de 3 nodos. " +
+          "Las lecturas (GET) se resuelven localmente; las escrituras (POST/PUT/DELETE) sólo las acepta el Leader " +
+          "y se responden cuando la entrada fue confirmada por mayoría. Un follower rechaza escrituras con 421 " +
+          "indicando el Leader (header X-Raft-Leader). " +
+          "Los endpoints 'Raft diagnóstico' son de sólo lectura. Los 'Raft RPC interno' se documentan como referencia: " +
+          "se sirven por HTTP en el puerto interno de cada nodo y no deben usarse como prueba de negocio.",
       },
       servers: [
         {
@@ -34,6 +39,26 @@ export function buildSwaggerDocs(nodeConfig) {
         },
       ],
       components: {
+        responses: {
+          NotLeader: {
+            description:
+              "El nodo no es Leader: la escritura NO se aplicó ni se propuso. Reenviar a leaderUrl (también en header X-Raft-Leader).",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/NotLeaderResponse" },
+              },
+            },
+          },
+          NotCommitted: {
+            description:
+              "Sin Leader conocido, sin quorum dentro del timeout o liderazgo perdido: la operación no fue confirmada.",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+        },
         schemas: {
           UserInput: {
             type: "object",
@@ -63,6 +88,11 @@ export function buildSwaggerDocs(nodeConfig) {
                 properties: {
                   _id: { type: "string", example: "664c1234567890abcdef1234" },
                   savings: { type: "number", example: 1500 },
+                  version: {
+                    type: "integer",
+                    description: "Índice del log Raft que produjo la última modificación",
+                    example: 7,
+                  },
                   createdAt: { type: "string", format: "date-time" },
                   updatedAt: { type: "string", format: "date-time" },
                 },
@@ -73,6 +103,17 @@ export function buildSwaggerDocs(nodeConfig) {
             type: "object",
             properties: {
               error: { type: "string", example: "Mensaje descriptivo del error" },
+            },
+          },
+          NotLeaderResponse: {
+            type: "object",
+            properties: {
+              error: { type: "string" },
+              nodeId: { type: "string", example: "node2" },
+              role: { type: "string", example: "FOLLOWER" },
+              term: { type: "integer", example: 3 },
+              leaderId: { type: "string", example: "node1" },
+              leaderUrl: { type: "string", example: "https://localhost:3001" },
             },
           },
           RaftStatus: {

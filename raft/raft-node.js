@@ -1,5 +1,6 @@
 import { Mutex } from "../utils/mutex.js";
 import { logger } from "../utils/logger.js";
+import { COMMANDS } from "./state-machine.js";
 import {
   CommitTimeoutError,
   LeadershipLostError,
@@ -23,7 +24,7 @@ const randomBetween = (min, max) =>
 // nunca observa un estado intermedio (p. ej. rol LEADER con un término nuevo).
 // Las llamadas de red se hacen fuera del mutex.
 export class RaftNode {
-  constructor({ config, rpc }) {
+  constructor({ config, stateMachine, rpc }) {
     this.id = config.id;
     this.apiUrl = config.apiUrl;
     this.raftUrl = config.raftUrl;
@@ -32,14 +33,16 @@ export class RaftNode {
     this.quorum = Math.floor(config.clusterSize / 2) + 1;
     this.timing = config.timing;
 
+    this.stateMachine = stateMachine;
     this.rpc = rpc;
     this.mutex = new Mutex();
 
     // Estado del protocolo (por ahora sólo en memoria).
     this.currentTerm = 0;
     this.votedFor = null;
-    this.log = [{ index: 0, term: 0, command: { type: "NOOP" } }]; // centinela
+    this.log = [{ index: 0, term: 0, command: { type: COMMANDS.NOOP } }]; // centinela
     this.commitIndex = 0;
+    this.lastApplied = 0;
 
     // Estado volátil, reconstruible.
     this.role = NODE_ROLES.FOLLOWER;
@@ -48,7 +51,9 @@ export class RaftNode {
     this.electionTimeoutMs = null;
     this.heartbeatTimer = null;
     this.lastHeartbeatAt = null;
-    this.pending = new Map(); // índice -> propuesta esperando commit
+    this.pending = new Map(); // índice -> propuesta esperando commit+apply
+    this.applying = false;
+    this.applyRequested = false;
     this.stopped = false;
 
     // Progreso de replicación conocido por el Leader, por follower.
@@ -115,6 +120,7 @@ export class RaftNode {
       lastLogIndex: this.lastLogIndex,
       lastLogTerm: this.lastLogTerm,
       commitIndex: this.commitIndex,
+      lastApplied: this.lastApplied,
       electionTimeoutMs: this.isLeader ? null : this.electionTimeoutMs,
       lastHeartbeatAt: this.lastHeartbeatAt
         ? new Date(this.lastHeartbeatAt).toISOString()
@@ -143,7 +149,8 @@ export class RaftNode {
   //  LOCAL       -> sólo en el log del Leader
   //  REPLICATED  -> el Leader sabe que está en algún follower, sin mayoría aún
   //  UNCOMMITTED -> en el log de un follower, todavía no confirmada
-  //  COMMITTED   -> confirmada por mayoría
+  //  COMMITTED   -> confirmada por mayoría, pendiente de aplicar
+  //  APPLIED     -> confirmada y aplicada en la State Machine local
   getLog({ from = 1, limit = 100 } = {}) {
     const start = Math.max(1, from);
     const entries = this.log.slice(start, start + limit).map((entry) => {
@@ -157,7 +164,8 @@ export class RaftNode {
         : undefined;
 
       let state;
-      if (entry.index <= this.commitIndex) state = "COMMITTED";
+      if (entry.index <= this.lastApplied) state = "APPLIED";
+      else if (entry.index <= this.commitIndex) state = "COMMITTED";
       else if (this.isLeader) state = replicatedOn.length > 1 ? "REPLICATED" : "LOCAL";
       else state = "UNCOMMITTED";
 
@@ -170,6 +178,7 @@ export class RaftNode {
       currentTerm: this.currentTerm,
       lastLogIndex: this.lastLogIndex,
       commitIndex: this.commitIndex,
+      lastApplied: this.lastApplied,
       entries,
     };
   }
@@ -321,7 +330,7 @@ export class RaftNode {
     const noop = {
       index: this.lastLogIndex + 1,
       term: this.currentTerm,
-      command: { type: "NOOP", leaderId: this.id },
+      command: { type: COMMANDS.NOOP, leaderId: this.id },
     };
     this.log.push(noop);
 
@@ -527,9 +536,7 @@ export class RaftNode {
           replicas,
           quorum: this.quorum,
         });
-        for (let index = previous + 1; index <= n; index++) {
-          this.#settleProposal(this.log[index], null);
-        }
+        this.#applyCommitted();
         return;
       }
     }
@@ -614,6 +621,7 @@ export class RaftNode {
             to: newCommitIndex,
           });
           this.commitIndex = newCommitIndex;
+          this.#applyCommitted();
         }
       }
 
@@ -621,7 +629,45 @@ export class RaftNode {
     });
   }
 
-  // ---------------------------------------------------------------- respuesta al cliente
+  // ---------------------------------------------------------------- State Machine
+
+  // Aplica en orden las entradas (lastApplied, commitIndex]. Nunca hay dos
+  // ejecuciones en paralelo; si se pide mientras corre, se repite al terminar.
+  async #applyCommitted() {
+    if (this.applying) {
+      this.applyRequested = true;
+      return;
+    }
+
+    this.applying = true;
+    try {
+      do {
+        this.applyRequested = false;
+        while (this.lastApplied < this.commitIndex) {
+          const entry = this.log[this.lastApplied + 1];
+          const result = await this.stateMachine.apply(entry);
+          this.lastApplied = entry.index;
+
+          logger.info("Entrada aplicada a la State Machine", {
+            index: entry.index,
+            term: entry.term,
+            type: entry.command.type,
+            ok: result.ok,
+            ...(result.ok ? {} : { error: result.error }),
+          });
+          this.#settleProposal(entry, result);
+        }
+      } while (this.applyRequested);
+    } catch (error) {
+      logger.error("Error aplicando entradas a la State Machine; se reintentará", {
+        lastApplied: this.lastApplied,
+        error: error.message,
+      });
+      setTimeout(() => this.#applyCommitted(), 1000);
+    } finally {
+      this.applying = false;
+    }
+  }
 
   #settleProposal(entry, result) {
     const proposal = this.pending.get(entry.index);

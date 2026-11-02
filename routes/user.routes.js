@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { UserController } from "../controllers/user.controller.js";
+import { requireLeader } from "../middlewares/require-leader.js";
 
 const router = Router();
 
@@ -67,6 +68,7 @@ router.get("/:id", UserController.getById);
  * /api/users:
  *   post:
  *     summary: Crea un nuevo usuario
+ *     description: Escritura replicada mediante Raft. Sólo la acepta el Leader; responde cuando la entrada fue committed por mayoría y aplicada.
  *     tags:
  *       - Users
  *     requestBody:
@@ -88,6 +90,10 @@ router.get("/:id", UserController.getById);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *       421:
+ *         $ref: '#/components/responses/NotLeader'
+ *       503:
+ *         $ref: '#/components/responses/NotCommitted'
  *       500:
  *         description: Error al persistir el usuario en la base de datos
  *         content:
@@ -95,12 +101,13 @@ router.get("/:id", UserController.getById);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post("/", UserController.create);
+router.post("/", requireLeader, UserController.create);
 /**
  * @openapi
  * /api/users/{id}:
  *   put:
  *     summary: Actualiza los datos de un usuario existente
+ *     description: Escritura replicada mediante Raft. Sólo la acepta el Leader; responde cuando la entrada fue committed por mayoría y aplicada.
  *     tags:
  *       - Users
  *     parameters:
@@ -135,6 +142,10 @@ router.post("/", UserController.create);
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
+ *       421:
+ *         $ref: '#/components/responses/NotLeader'
+ *       503:
+ *         $ref: '#/components/responses/NotCommitted'
  *       500:
  *         description: Error interno del servidor
  *         content:
@@ -142,12 +153,13 @@ router.post("/", UserController.create);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.put("/:id", UserController.update);
+router.put("/:id", requireLeader, UserController.update);
 /**
  * @openapi
  * /api/users/{id}:
  *   delete:
  *     summary: Elimina un usuario por su ID
+ *     description: Escritura replicada mediante Raft. Sólo la acepta el Leader; responde cuando la entrada fue committed por mayoría y aplicada.
  *     tags:
  *       - Users
  *     parameters:
@@ -158,8 +170,18 @@ router.put("/:id", UserController.update);
  *         schema:
  *           type: string
  *     responses:
- *       204:
- *         description: Usuario eliminado exitosamente (sin contenido retornado)
+ *       200:
+ *         description: Usuario eliminado exitosamente
+ *       404:
+ *         description: Usuario no encontrado
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       421:
+ *         $ref: '#/components/responses/NotLeader'
+ *       503:
+ *         $ref: '#/components/responses/NotCommitted'
  *       500:
  *         description: Error al procesar la eliminación
  *         content:
@@ -167,7 +189,7 @@ router.put("/:id", UserController.update);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.delete("/:id", UserController.delete);
+router.delete("/:id", requireLeader, UserController.delete);
 /**
  * @openapi
  * /api/users/{id}/savings:
