@@ -5,6 +5,7 @@ export const COMMANDS = {
   CREATE_USER: "CREATE_USER",
   UPDATE_USER: "UPDATE_USER",
   DELETE_USER: "DELETE_USER",
+  SET_SAVINGS: "SET_SAVINGS",
 };
 
 const BUSINESS_ERRORS = new Set(["ValidationError", "CastError"]);
@@ -16,8 +17,8 @@ const fail = (status, error) => ({ ok: false, status, error });
 // y sólo recibe entradas ya committed, en orden de índice.
 //
 // Cada comando contiene todo lo no determinístico (id, timestamp) y su
-// aplicación es idempotente: aplicar dos veces la misma entrada produce el mismo
-// estado.
+// aplicación es idempotente, porque si el proceso cae entre aplicar la entrada y
+// persistir lastApplied, la entrada se vuelve a aplicar al reiniciar.
 //
 // Los errores de negocio (validación, recurso inexistente) son un resultado
 // determinístico: todas las réplicas llegan al mismo resultado y avanzan
@@ -37,6 +38,8 @@ export class UserStateMachine {
           return await this.#updateUser(command, index);
         case COMMANDS.DELETE_USER:
           return await this.#deleteUser(command);
+        case COMMANDS.SET_SAVINGS:
+          return await this.#setSavings(command, index);
         default:
           return fail(400, `Comando desconocido: ${command.type}`);
       }
@@ -81,5 +84,15 @@ export class UserStateMachine {
   async #deleteUser({ id }) {
     const user = await User.findByIdAndDelete(id);
     return user ? ok({ _id: id }) : fail(404, "User not found");
+  }
+
+  // Valor absoluto (no un incremento) para que reaplicar sea idempotente.
+  async #setSavings({ id, savings, timestamp }, index) {
+    const user = await User.findByIdAndUpdate(
+      id,
+      { $set: { savings, updatedAt: new Date(timestamp), version: index } },
+      { new: true, runValidators: true },
+    );
+    return user ? ok(user.toJSON()) : fail(404, "User not found");
   }
 }

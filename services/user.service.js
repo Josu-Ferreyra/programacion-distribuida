@@ -2,9 +2,14 @@ import mongoose from "mongoose";
 import crypto from "crypto";
 import { User, USER_EDITABLE_FIELDS } from "../models/user.model.js";
 import { redisClient } from "../config/redis.js";
-import { releaseLock } from "../utils/helpers.js";
+import { delay, releaseLock } from "../utils/helpers.js";
 import { getRaftNode } from "../raft/index.js";
 import { COMMANDS } from "../raft/state-machine.js";
+
+const LOCK_TTL_MS = Number(process.env.SAVINGS_LOCK_TTL_MS || 10000);
+const CRITICAL_SECTION_DELAY_MS = Number(
+  process.env.SAVINGS_CRITICAL_SECTION_DELAY_MS || 0,
+);
 
 function httpError(statusCode, message, details) {
   const err = new Error(message);
@@ -98,32 +103,48 @@ export class UserService {
     return replicate({ type: COMMANDS.DELETE_USER, id });
   }
 
+  // Integración TP2 + Raft:
+  //  - Redis decide QUIÉN entra a la sección crítica (lock distribuido).
+  //  - Raft decide CÓMO se ordena, replica y confirma la modificación aceptada.
+  // El lock se libera recién cuando la entrada fue committed y aplicada, así la
+  // siguiente operación lee el saldo ya actualizado.
   static async updateSavings(userId, amount) {
+    assertValidId(userId);
+    if (!redisClient.isReady) {
+      throw httpError(503, "Redis is not available: distributed lock cannot be acquired");
+    }
+
     const lockKey = `lock:users:${userId}:savings`;
     const lockValue = crypto.randomUUID();
 
     const acquired = await redisClient.set(lockKey, lockValue, {
       NX: true,
-      PX: 6000,
+      PX: LOCK_TTL_MS,
     });
 
     if (!acquired) {
-      const err = new Error("Could not acquire lock for user savings update");
-      err.statusCode = 409;
-      throw err;
+      throw httpError(409, "Could not acquire lock for user savings update");
     }
 
     try {
-      const user = await User.findById(userId).select("savings");
-      if (!user) {
-        const err = new Error("User not found");
-        err.statusCode = 404;
-        throw err;
-      }
+      await getRaftNode().waitUntilLeaderIsUpToDate();
+      const user = await findExistingUser(userId);
 
       const newSavings = user.savings + amount;
-      await User.findByIdAndUpdate(userId, { savings: newSavings });
-      return newSavings;
+      if (newSavings < 0) {
+        throw httpError(400, "Insufficient savings");
+      }
+
+      // Retardo opcional para que la exclusión mutua sea observable.
+      if (CRITICAL_SECTION_DELAY_MS > 0) await delay(CRITICAL_SECTION_DELAY_MS);
+
+      return await replicate({
+        type: COMMANDS.SET_SAVINGS,
+        id: userId,
+        savings: newSavings,
+        amount,
+        timestamp: new Date().toISOString(),
+      });
     } finally {
       await releaseLock(redisClient, lockKey, lockValue);
     }

@@ -195,6 +195,7 @@ router.delete("/:id", requireLeader, UserController.delete);
  * /api/users/{id}/savings:
  *   post:
  *     summary: Actualiza los ahorros de un usuario aplicando exclusión mutua mediante lock en Redis
+ *     description: Escritura replicada mediante Raft. Sólo la acepta el Leader; responde cuando la entrada fue committed por mayoría y aplicada.
  *     tags:
  *       - Savings
  *     parameters:
@@ -247,6 +248,10 @@ router.delete("/:id", requireLeader, UserController.delete);
  *                 error:
  *                   type: string
  *                   example: Could not acquire lock for user savings update. Please try again later.
+ *       421:
+ *         $ref: '#/components/responses/NotLeader'
+ *       503:
+ *         $ref: '#/components/responses/NotCommitted'
  *       500:
  *         description: Error interno durante la actualización
  *         content:
@@ -254,6 +259,6 @@ router.delete("/:id", requireLeader, UserController.delete);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.post("/:id/savings", UserController.updateSavings);
+router.post("/:id/savings", requireLeader, UserController.updateSavings);
 
 export default router;

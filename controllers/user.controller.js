@@ -66,10 +66,11 @@ export const UserController = {
         return res.status(400).json({ error: "Amount must be a number" });
       }
 
-      const newSavings = await UserService.updateSavings(req.params.id, amount);
+      const { data, raft } = await UserService.updateSavings(req.params.id, amount);
+      setRaftHeaders(res, raft);
       res
         .status(200)
-        .json({ message: "Savings updated successfully", savings: newSavings });
+        .json({ message: "Savings updated successfully", savings: data.savings });
     } catch (error) {
       next(error);
     }

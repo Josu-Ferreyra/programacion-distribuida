@@ -1,3 +1,4 @@
+import { EventEmitter } from "events";
 import { Mutex } from "../utils/mutex.js";
 import { logger } from "../utils/logger.js";
 import { COMMANDS } from "./state-machine.js";
@@ -23,8 +24,9 @@ const randomBetween = (min, max) =>
 // de forma síncrona ANTES del primer await, de modo que el resto del proceso
 // nunca observa un estado intermedio (p. ej. rol LEADER con un término nuevo).
 // Las llamadas de red se hacen fuera del mutex.
-export class RaftNode {
+export class RaftNode extends EventEmitter {
   constructor({ config, storage, stateMachine, rpc }) {
+    super();
     this.id = config.id;
     this.apiUrl = config.apiUrl;
     this.raftUrl = config.raftUrl;
@@ -52,6 +54,7 @@ export class RaftNode {
     this.electionTimeoutMs = null;
     this.heartbeatTimer = null;
     this.lastHeartbeatAt = null;
+    this.leaderTermStartIndex = 0;
     this.pending = new Map(); // índice -> propuesta esperando commit+apply
     this.applying = false;
     this.applyRequested = false;
@@ -355,6 +358,7 @@ export class RaftNode {
     };
     await this.storage.appendEntries([noop]);
     this.log.push(noop);
+    this.leaderTermStartIndex = noop.index;
 
     this.heartbeatTimer = setInterval(
       () => this.#broadcastAppendEntries(),
@@ -689,6 +693,7 @@ export class RaftNode {
             ...(result.ok ? {} : { error: result.error }),
           });
           this.#settleProposal(entry, result);
+          this.emit("applied", entry.index);
         }
       } while (this.applyRequested);
     } catch (error) {
@@ -710,5 +715,32 @@ export class RaftNode {
     this.pending.delete(entry.index);
     if (proposal.term === entry.term) proposal.resolve(result);
     else proposal.reject(new LeadershipLostError({ index: entry.index, term: proposal.term }));
+  }
+
+  // Espera a que el Leader haya aplicado todo lo confirmado en términos
+  // anteriores (su NOOP inicial), para que una lectura local previa a una
+  // escritura (p. ej. leer el saldo) no use un estado viejo.
+  async waitUntilLeaderIsUpToDate(timeoutMs = this.timing.commitTimeoutMs) {
+    if (!this.isLeader) throw new NotLeaderError(this);
+    const target = this.leaderTermStartIndex;
+    if (this.lastApplied >= target) return;
+
+    await new Promise((resolve, reject) => {
+      const onApplied = (index) => {
+        if (index >= target) {
+          cleanup();
+          resolve();
+        }
+      };
+      const timer = setTimeout(() => {
+        cleanup();
+        reject(new CommitTimeoutError(this.log[target], timeoutMs));
+      }, timeoutMs);
+      const cleanup = () => {
+        clearTimeout(timer);
+        this.off("applied", onApplied);
+      };
+      this.on("applied", onApplied);
+    });
   }
 }
