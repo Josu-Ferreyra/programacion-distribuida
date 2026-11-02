@@ -1,0 +1,221 @@
+[18:12:27.915] Base de node1 eliminada (mongodb://127.0.0.1:27018/tp4_node1)
+[18:12:27.920] Base de node2 eliminada (mongodb://127.0.0.1:27018/tp4_node2)
+[18:12:27.925] Base de node3 eliminada (mongodb://127.0.0.1:27018/tp4_node3)
+
+==============================================================================
+A - Arranque de tres nodos: se identifica un Leader y dos followers
+==============================================================================
+[18:12:27.928] Iniciado node1 (pid 28445)
+[18:12:27.931] Iniciado node2 (pid 28446)
+[18:12:27.934] Iniciado node3 (pid 28452)
+┌─────────┬────────────┬──────┬─────────┬──────────────┬─────────────┬─────────────┬───────┬────────────────┐
+│ (index) │ role       │ term │ leader  │ lastLogIndex │ commitIndex │ lastApplied │ users │ usersHash      │
+├─────────┼────────────┼──────┼─────────┼──────────────┼─────────────┼─────────────┼───────┼────────────────┤
+│ node1   │ 'LEADER'   │ 1    │ 'node1' │ 1            │ 1           │ 1           │ 0     │ '4f53cda18c2b' │
+│ node2   │ 'FOLLOWER' │ 1    │ 'node1' │ 1            │ 0           │ 0           │ 0     │ '4f53cda18c2b' │
+│ node3   │ 'FOLLOWER' │ 1    │ 'node1' │ 1            │ 0           │ 0           │ 0     │ '4f53cda18c2b' │
+└─────────┴────────────┴──────┴─────────┴──────────────┴─────────────┴─────────────┴───────┴────────────────┘
+  OK   Leader: node1 (term 1); followers: node2, node3
+
+==============================================================================
+B - Escritura sobre follower: no se aplica localmente saltándose el consenso
+==============================================================================
+  POST https://localhost:3002/api/users -> 421 { 'x-raft-leader': 'https://localhost:3001' } {
+  error: 'Este nodo (node2) no es el Leader. Las escrituras deben enviarse al Leader node1.',
+  nodeId: 'node2',
+  role: 'FOLLOWER',
+  term: 1,
+  leaderId: 'node1',
+  leaderUrl: 'https://localhost:3001'
+}
+  OK   node2 responde 421 Misdirected Request
+  OK   informa el Leader (https://localhost:3001)
+  OK   ningún nodo cambió su log ni su base
+
+==============================================================================
+C - CRUD sobre Leader: las operaciones confirmadas convergen en los tres nodos
+==============================================================================
+  POST -> 201 { 'x-raft-index': '2', 'x-raft-node': 'node1', 'x-raft-term': '1' }
+  OK   usuario creado con _id 6ae8d28e5e89130071a57ce3
+  OK   node1: mismo _id 6ae8d28e5e89130071a57ce3 y version 2
+  OK   node2: mismo _id 6ae8d28e5e89130071a57ce3 y version 2
+  OK   node3: mismo _id 6ae8d28e5e89130071a57ce3 y version 2
+  PUT  -> 200 { 'x-raft-index': '3', 'x-raft-node': 'node1', 'x-raft-term': '1' }
+  OK   node1: age=31, version=3, updatedAt=2026-11-02T18:12:31.571Z
+  OK   node2: age=31, version=3, updatedAt=2026-11-02T18:12:31.571Z
+  OK   node3: age=31, version=3, updatedAt=2026-11-02T18:12:31.571Z
+  DELETE -> 200 { 'x-raft-index': '5', 'x-raft-node': 'node1', 'x-raft-term': '1' }
+  OK   node1: usuario eliminado (GET -> 404)
+  OK   node2: usuario eliminado (GET -> 404)
+  OK   node3: usuario eliminado (GET -> 404)
+┌─────────┬────────────┬──────┬─────────┬──────────────┬─────────────┬─────────────┬───────┬────────────────┐
+│ (index) │ role       │ term │ leader  │ lastLogIndex │ commitIndex │ lastApplied │ users │ usersHash      │
+├─────────┼────────────┼──────┼─────────┼──────────────┼─────────────┼─────────────┼───────┼────────────────┤
+│ node1   │ 'LEADER'   │ 1    │ 'node1' │ 5            │ 5           │ 5           │ 1     │ 'a3fab575c2ce' │
+│ node2   │ 'FOLLOWER' │ 1    │ 'node1' │ 5            │ 5           │ 5           │ 1     │ 'a3fab575c2ce' │
+│ node3   │ 'FOLLOWER' │ 1    │ 'node1' │ 5            │ 5           │ 5           │ 1     │ 'a3fab575c2ce' │
+└─────────┴────────────┴──────┴─────────┴──────────────┴─────────────┴─────────────┴───────┴────────────────┘
+
+==============================================================================
+D - Caída del Leader: los nodos restantes realizan una nueva elección
+==============================================================================
+[18:12:33.586] Detenido node1 con SIGKILL
+[18:12:36.549] Nuevo Leader node3 en 2963 ms
+┌─────────┬────────────┬──────┬─────────┬──────────────┬─────────────┬─────────────┬───────┬────────────────┐
+│ (index) │ role       │ term │ leader  │ lastLogIndex │ commitIndex │ lastApplied │ users │ usersHash      │
+├─────────┼────────────┼──────┼─────────┼──────────────┼─────────────┼─────────────┼───────┼────────────────┤
+│ node1   │ 'DOWN'     │      │         │              │             │             │       │                │
+│ node2   │ 'FOLLOWER' │ 2    │ 'node3' │ 6            │ 5           │ 5           │ 1     │ 'a3fab575c2ce' │
+│ node3   │ 'LEADER'   │ 2    │ 'node3' │ 6            │ 6           │ 6           │ 1     │ 'a3fab575c2ce' │
+└─────────┴────────────┴──────┴─────────┴──────────────┴─────────────┴─────────────┴───────┴────────────────┘
+  OK   nuevo Leader node3 con término 2 > 1
+
+==============================================================================
+E - Quorum 2/3: el cluster puede confirmar nuevas operaciones
+==============================================================================
+  POST -> 201 { 'x-raft-index': '7', 'x-raft-node': 'node3', 'x-raft-term': '2' }
+  OK   escritura confirmada con Leader + 1 follower
+  entrada en el log del Leader: {
+  index: 7,
+  term: 2,
+  command: {
+    type: 'CREATE_USER',
+    id: '6ae8d294d70ec81ccb1197d9',
+    data: {
+      name: 'ConQuorum',
+      lastName: 'Prueba',
+      age: 30,
+      profession: 'QA',
+      nativeLanguage: 'Spanish',
+      country: 'Argentina',
+      yearsOfExperience: 3
+    },
+    timestamp: '2026-11-02T18:12:36.559Z'
+  },
+  state: 'APPLIED',
+  replicatedOn: [ 'node3', 'node2' ]
+}
+  OK   entrada 7 replicada en node3, node2 y aplicada
+
+==============================================================================
+F - Sin quorum 1/3: no se confirman nuevas escrituras
+==============================================================================
+[18:12:37.067] Detenido node2 con SIGKILL
+  POST -> 503 {
+  error: 'La entrada 8 no alcanzó quorum en 5000 ms: quedó en el log local del Leader SIN confirmar y no fue aplicada. Podría confirmarse más adelante si se recupera la mayoría.',
+  index: 8,
+  term: 2,
+  committed: false
+}
+  OK   la escritura NO se confirma (503)
+  entrada en el log del Leader: {
+  index: 8,
+  term: 2,
+  command: {
+    type: 'CREATE_USER',
+    id: '6ae8d295d70ec81ccb1197dd',
+    data: {
+      name: 'SinQuorum',
+      lastName: 'Prueba',
+      age: 30,
+      profession: 'QA',
+      nativeLanguage: 'Spanish',
+      country: 'Argentina',
+      yearsOfExperience: 3
+    },
+    timestamp: '2026-11-02T18:12:37.071Z'
+  },
+  state: 'LOCAL',
+  replicatedOn: [ 'node3' ]
+}
+  OK   entrada 8 sólo en el log local del Leader (state=LOCAL)
+  OK   la State Machine no la aplicó (misma cantidad de usuarios)
+┌─────────┬──────────┬──────┬─────────┬──────────────┬─────────────┬─────────────┬───────┬────────────────┐
+│ (index) │ role     │ term │ leader  │ lastLogIndex │ commitIndex │ lastApplied │ users │ usersHash      │
+├─────────┼──────────┼──────┼─────────┼──────────────┼─────────────┼─────────────┼───────┼────────────────┤
+│ node1   │ 'DOWN'   │      │         │              │             │             │       │                │
+│ node2   │ 'DOWN'   │      │         │              │             │             │       │                │
+│ node3   │ 'LEADER' │ 2    │ 'node3' │ 8            │ 7           │ 7           │ 2     │ 'c05b288987d7' │
+└─────────┴──────────┴──────┴─────────┴──────────────┴─────────────┴─────────────┴───────┴────────────────┘
+
+==============================================================================
+G - Follower atrasado: al regresar recupera las entradas faltantes
+==============================================================================
+[18:12:42.090] Iniciado node1 (pid 28505)
+[18:12:42.714] node1 reinicia con lastLogIndex=5, Leader tiene 8
+  OK   con la mayoría recuperada, la entrada 8 (antes LOCAL) se replica y confirma: el 503 de F significaba 'no confirmada todavía', no 'descartada'
+[18:12:43.712] Iniciado node2 (pid 28521)
+┌─────────┬────────────┬──────┬─────────┬──────────────┬─────────────┬─────────────┬───────┬────────────────┐
+│ (index) │ role       │ term │ leader  │ lastLogIndex │ commitIndex │ lastApplied │ users │ usersHash      │
+├─────────┼────────────┼──────┼─────────┼──────────────┼─────────────┼─────────────┼───────┼────────────────┤
+│ node3   │ 'LEADER'   │ 2    │ 'node3' │ 8            │ 8           │ 8           │ 3     │ 'a4281afc4900' │
+│ node1   │ 'FOLLOWER' │ 2    │ 'node3' │ 8            │ 8           │ 8           │ 3     │ 'a4281afc4900' │
+│ node2   │ 'FOLLOWER' │ 2    │ 'node3' │ 8            │ 8           │ 8           │ 3     │ 'a4281afc4900' │
+└─────────┴────────────┴──────┴─────────┴──────────────┴─────────────┴─────────────┴───────┴────────────────┘
+  OK   los tres nodos tienen el mismo log y el mismo estado de negocio
+[18:12:44.764] Variante G2: follower atrasado frente a un Leader recién elegido
+[18:12:44.775] Detenido node1 con SIGKILL
+  OK   confirmada Atrasado1 (index 9) sin node1
+  OK   confirmada Atrasado2 (index 10) sin node1
+[18:12:45.098] Detenido node3 con SIGKILL
+[18:12:45.100] Iniciado node1 (pid 28538)
+  OK   sólo node2 puede ganar: node1 tiene un log desactualizado (restricción de elección)
+  OK   node1 recuperó las entradas faltantes (ver "rechazó AppendEntries por inconsistencia" en eventos-raft.log)
+[18:12:47.561] Iniciado node3 (pid 28562)
+┌─────────┬────────────┬──────┬─────────┬──────────────┬─────────────┬─────────────┬───────┬────────────────┐
+│ (index) │ role       │ term │ leader  │ lastLogIndex │ commitIndex │ lastApplied │ users │ usersHash      │
+├─────────┼────────────┼──────┼─────────┼──────────────┼─────────────┼─────────────┼───────┼────────────────┤
+│ node2   │ 'LEADER'   │ 3    │ 'node2' │ 11           │ 11          │ 11          │ 5     │ '75ba3e0b3352' │
+│ node1   │ 'FOLLOWER' │ 3    │ 'node2' │ 11           │ 11          │ 11          │ 5     │ '75ba3e0b3352' │
+│ node3   │ 'FOLLOWER' │ 3    │ 'node2' │ 11           │ 11          │ 11          │ 5     │ '75ba3e0b3352' │
+└─────────┴────────────┴──────┴─────────┴──────────────┴─────────────┴─────────────┴───────┴────────────────┘
+
+==============================================================================
+H - Restart completo: se recuperan estado crítico y entradas confirmadas
+==============================================================================
+┌─────────┬────────────┬──────┬─────────┬──────────────┬─────────────┬─────────────┬───────┬────────────────┐
+│ (index) │ role       │ term │ leader  │ lastLogIndex │ commitIndex │ lastApplied │ users │ usersHash      │
+├─────────┼────────────┼──────┼─────────┼──────────────┼─────────────┼─────────────┼───────┼────────────────┤
+│ node1   │ 'FOLLOWER' │ 3    │ 'node2' │ 11           │ 11          │ 11          │ 5     │ '75ba3e0b3352' │
+│ node2   │ 'LEADER'   │ 3    │ 'node2' │ 11           │ 11          │ 11          │ 5     │ '75ba3e0b3352' │
+│ node3   │ 'FOLLOWER' │ 3    │ 'node2' │ 11           │ 11          │ 11          │ 5     │ '75ba3e0b3352' │
+└─────────┴────────────┴──────┴─────────┴──────────────┴─────────────┴─────────────┴───────┴────────────────┘
+[18:12:48.587] Detenido node3 con SIGTERM
+[18:12:48.589] Detenido node1 con SIGTERM
+[18:12:48.590] Detenido node2 con SIGTERM
+[18:12:48.590] Los tres procesos detenidos. Reiniciando sin borrar las bases...
+[18:12:48.592] Iniciado node1 (pid 28578)
+[18:12:48.594] Iniciado node2 (pid 28579)
+[18:12:48.597] Iniciado node3 (pid 28580)
+  OK   node1 al arrancar: term=3, votedFor=node2, lastLogIndex=11, lastApplied=11
+  OK   node2 al arrancar: term=3, votedFor=node2, lastLogIndex=11, lastApplied=11
+  OK   node3 al arrancar: term=3, votedFor=null, lastLogIndex=11, lastApplied=11
+┌─────────┬────────────┬──────┬─────────┬──────────────┬─────────────┬─────────────┬───────┬────────────────┐
+│ (index) │ role       │ term │ leader  │ lastLogIndex │ commitIndex │ lastApplied │ users │ usersHash      │
+├─────────┼────────────┼──────┼─────────┼──────────────┼─────────────┼─────────────┼───────┼────────────────┤
+│ node1   │ 'FOLLOWER' │ 4    │ 'node2' │ 12           │ 12          │ 12          │ 5     │ '75ba3e0b3352' │
+│ node2   │ 'LEADER'   │ 4    │ 'node2' │ 12           │ 12          │ 12          │ 5     │ '75ba3e0b3352' │
+│ node3   │ 'FOLLOWER' │ 4    │ 'node2' │ 12           │ 12          │ 12          │ 5     │ '75ba3e0b3352' │
+└─────────┴────────────┴──────┴─────────┴──────────────┴─────────────┴─────────────┴───────┴────────────────┘
+  OK   nueva elección: término 4 > 3 (no retrocede)
+  OK   el estado de negocio confirmado sigue disponible (mismo hash de usuarios)
+
+==============================================================================
+I - Integración Redis + Raft: exclusión mutua y modificación confirmada
+==============================================================================
+[18:12:51.289] Dos depósitos concurrentes sobre 6ae8d2a345910abf546176f1 (sección crítica de 1000 ms)
+  depósito +100 -> 200 { 'x-raft-index': '14', 'x-raft-node': 'node2', 'x-raft-term': '4' } { message: 'Savings updated successfully', savings: 100 }
+  depósito +200 -> 409 {} { error: 'Could not acquire lock for user savings update' }
+  OK   una operación obtiene el lock y se confirma; la concurrente es rechazada (409)
+  depósito +200 (tras liberar el lock) -> 200 { 'x-raft-index': '15', 'x-raft-node': 'node2', 'x-raft-term': '4' } { message: 'Savings updated successfully', savings: 300 }
+  OK   liberado el lock, la siguiente lee el saldo confirmado (300)
+  OK   node1: savings=300, version=15
+  OK   node2: savings=300, version=15
+  OK   node3: savings=300, version=15
+[18:12:53.842] Detenido node1 con SIGTERM
+[18:12:53.842] Detenido node3 con SIGTERM
+[18:12:53.844] Detenido node2 con SIGTERM
+
+==============================================================================
+RESULTADO: todos los escenarios OK
+==============================================================================

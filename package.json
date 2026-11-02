@@ -17,7 +17,8 @@
     "node2": "node server.js node2",
     "node3": "node server.js node3",
     "start:cluster": "node scripts/cluster.js",
-    "status": "node scripts/status.js"
+    "status": "node scripts/status.js",
+    "e2e": "node scripts/e2e.js"
   },
   "dependencies": {
     "dotenv": "^17.4.2",

@@ -1,0 +1,274 @@
+2026-11-02 15:12:28.381 [node1] info  MongoDB connected (tp4_node1)
+2026-11-02 15:12:28.393 [node2] info  MongoDB connected (tp4_node2)
+2026-11-02 15:12:28.393 [node3] info  MongoDB connected (tp4_node3)
+2026-11-02 15:12:28.397 [node1] info  Redis client connected successfully
+2026-11-02 15:12:28.407 [node1] info  Estado Raft recuperado desde almacenamiento local {"commitIndex": 0, "currentTerm": 0, "lastApplied": 0, "lastLogIndex": 0, "votedFor": null}
+2026-11-02 15:12:28.407 [node1] info  Nodo iniciado como FOLLOWER {"electionTimeoutMs": 1606, "term": 0}
+2026-11-02 15:12:28.410 [node2] info  Redis client connected successfully
+2026-11-02 15:12:28.413 [node3] info  Redis client connected successfully
+2026-11-02 15:12:28.417 [node2] info  Estado Raft recuperado desde almacenamiento local {"commitIndex": 0, "currentTerm": 0, "lastApplied": 0, "lastLogIndex": 0, "votedFor": null}
+2026-11-02 15:12:28.418 [node2] info  Nodo iniciado como FOLLOWER {"electionTimeoutMs": 2100, "term": 0}
+2026-11-02 15:12:28.421 [node3] info  Estado Raft recuperado desde almacenamiento local {"commitIndex": 0, "currentTerm": 0, "lastApplied": 0, "lastLogIndex": 0, "votedFor": null}
+2026-11-02 15:12:28.421 [node3] info  Nodo iniciado como FOLLOWER {"electionTimeoutMs": 2132, "term": 0}
+2026-11-02 15:12:28.434 [node1] info  API HTTPS escuchando en https://localhost:3001
+2026-11-02 15:12:28.435 [node1] info  RPC interno Raft escuchando en http://127.0.0.1:4001
+2026-11-02 15:12:28.446 [node2] info  API HTTPS escuchando en https://localhost:3002
+2026-11-02 15:12:28.446 [node2] info  RPC interno Raft escuchando en http://127.0.0.1:4002
+2026-11-02 15:12:28.449 [node3] info  API HTTPS escuchando en https://localhost:3003
+2026-11-02 15:12:28.449 [node3] info  RPC interno Raft escuchando en http://127.0.0.1:4003
+2026-11-02 15:12:30.015 [node1] info  Election timeout vencido: FOLLOWER -> CANDIDATE, inicia elección {"lastLogIndex": 0, "lastLogTerm": 0, "term": 1}
+2026-11-02 15:12:30.046 [node2] info  Término actualizado 0 -> 1 {"reason": "RequestVote de node1"}
+2026-11-02 15:12:30.046 [node3] info  Término actualizado 0 -> 1 {"reason": "RequestVote de node1"}
+2026-11-02 15:12:30.051 [node2] info  Voto concedido a node1 {"term": 1}
+2026-11-02 15:12:30.051 [node3] info  Voto concedido a node1 {"term": 1}
+2026-11-02 15:12:30.055 [node1] info  Voto recibido de node2 {"quorum": 2, "term": 1, "votes": 2}
+2026-11-02 15:12:30.055 [node1] info  CANDIDATE -> LEADER: mayoría alcanzada {"quorum": 2, "term": 1, "votes": ["node1", "node2"]}
+2026-11-02 15:12:30.065 [node2] info  Leader reconocido: node1 {"term": 1}
+2026-11-02 15:12:30.065 [node3] info  Leader reconocido: node1 {"term": 1}
+2026-11-02 15:12:30.071 [node2] info  Entradas replicadas desde node1 al log local {"from": 1, "to": 1}
+2026-11-02 15:12:30.071 [node3] info  Entradas replicadas desde node1 al log local {"from": 1, "to": 1}
+2026-11-02 15:12:30.073 [node1] info  Peer node3 accesible {"nextIndex": 1}
+2026-11-02 15:12:30.073 [node1] info  Entradas replicadas en node3 {"from": 1, "matchIndex": 1, "to": 1}
+2026-11-02 15:12:30.073 [node1] info  Entradas COMMITTED por mayoría {"from": 1, "quorum": 2, "replicas": ["node1", "node3"], "to": 1}
+2026-11-02 15:12:30.075 [node1] info  Peer node2 accesible {"nextIndex": 1}
+2026-11-02 15:12:30.076 [node1] info  Entradas replicadas en node2 {"from": 1, "matchIndex": 1, "to": 1}
+2026-11-02 15:12:30.076 [node1] info  Entrada aplicada a la State Machine {"index": 1, "ok": true, "term": 1, "type": "NOOP"}
+2026-11-02 15:12:30.568 [node2] info  commitIndex avanzado según el Leader {"from": 0, "to": 1}
+2026-11-02 15:12:30.568 [node3] info  commitIndex avanzado según el Leader {"from": 0, "to": 1}
+2026-11-02 15:12:30.571 [node2] info  Entrada aplicada a la State Machine {"index": 1, "ok": true, "term": 1, "type": "NOOP"}
+2026-11-02 15:12:30.571 [node3] info  Entrada aplicada a la State Machine {"index": 1, "ok": true, "term": 1, "type": "NOOP"}
+2026-11-02 15:12:30.578 [node2] warn  Escritura rechazada: node2 es FOLLOWER {"leaderId": "node1"}
+2026-11-02 15:12:30.578 [node2] warn  Error en la operación: Este nodo (node2) no es el Leader. Las escrituras deben enviarse al Leader node1. {"statusCode": 421}
+2026-11-02 15:12:30.580 [node2] warn  Escritura rechazada: node2 es FOLLOWER {"leaderId": "node1"}
+2026-11-02 15:12:30.580 [node2] warn  Error en la operación: Este nodo (node2) no es el Leader. Las escrituras deben enviarse al Leader node1. {"statusCode": 421}
+2026-11-02 15:12:30.595 [node1] info  Entrada agregada al log local del Leader (aún NO committed) {"index": 2, "term": 1, "type": "CREATE_USER"}
+2026-11-02 15:12:30.598 [node2] info  Entradas replicadas desde node1 al log local {"from": 2, "to": 2}
+2026-11-02 15:12:30.598 [node3] info  Entradas replicadas desde node1 al log local {"from": 2, "to": 2}
+2026-11-02 15:12:30.599 [node1] info  Entradas replicadas en node3 {"from": 2, "matchIndex": 2, "to": 2}
+2026-11-02 15:12:30.599 [node1] info  Entradas COMMITTED por mayoría {"from": 2, "quorum": 2, "replicas": ["node1", "node3"], "to": 2}
+2026-11-02 15:12:30.601 [node1] info  Entradas replicadas en node2 {"from": 2, "matchIndex": 2, "to": 2}
+2026-11-02 15:12:30.603 [node1] info  Entrada aplicada a la State Machine {"index": 2, "ok": true, "term": 1, "type": "CREATE_USER"}
+2026-11-02 15:12:31.068 [node2] info  commitIndex avanzado según el Leader {"from": 1, "to": 2}
+2026-11-02 15:12:31.068 [node3] info  commitIndex avanzado según el Leader {"from": 1, "to": 2}
+2026-11-02 15:12:31.073 [node2] info  Entrada aplicada a la State Machine {"index": 2, "ok": true, "term": 1, "type": "CREATE_USER"}
+2026-11-02 15:12:31.073 [node3] info  Entrada aplicada a la State Machine {"index": 2, "ok": true, "term": 1, "type": "CREATE_USER"}
+2026-11-02 15:12:31.572 [node1] info  Entrada agregada al log local del Leader (aún NO committed) {"index": 3, "term": 1, "type": "UPDATE_USER"}
+2026-11-02 15:12:31.574 [node2] info  Entradas replicadas desde node1 al log local {"from": 3, "to": 3}
+2026-11-02 15:12:31.574 [node3] info  Entradas replicadas desde node1 al log local {"from": 3, "to": 3}
+2026-11-02 15:12:31.575 [node1] info  Entradas replicadas en node2 {"from": 3, "matchIndex": 3, "to": 3}
+2026-11-02 15:12:31.575 [node1] info  Entradas COMMITTED por mayoría {"from": 3, "quorum": 2, "replicas": ["node1", "node2"], "to": 3}
+2026-11-02 15:12:31.577 [node1] info  Entradas replicadas en node3 {"from": 3, "matchIndex": 3, "to": 3}
+2026-11-02 15:12:31.579 [node1] info  Entrada aplicada a la State Machine {"index": 3, "ok": true, "term": 1, "type": "UPDATE_USER"}
+2026-11-02 15:12:32.065 [node2] info  commitIndex avanzado según el Leader {"from": 2, "to": 3}
+2026-11-02 15:12:32.066 [node3] info  commitIndex avanzado según el Leader {"from": 2, "to": 3}
+2026-11-02 15:12:32.071 [node2] info  Entrada aplicada a la State Machine {"index": 3, "ok": true, "term": 1, "type": "UPDATE_USER"}
+2026-11-02 15:12:32.071 [node3] info  Entrada aplicada a la State Machine {"index": 3, "ok": true, "term": 1, "type": "UPDATE_USER"}
+2026-11-02 15:12:32.569 [node1] info  Entrada agregada al log local del Leader (aún NO committed) {"index": 4, "term": 1, "type": "CREATE_USER"}
+2026-11-02 15:12:32.572 [node1] info  Entradas replicadas en node3 {"from": 4, "matchIndex": 4, "to": 4}
+2026-11-02 15:12:32.572 [node1] info  Entradas COMMITTED por mayoría {"from": 4, "quorum": 2, "replicas": ["node1", "node3"], "to": 4}
+2026-11-02 15:12:32.572 [node2] info  Entradas replicadas desde node1 al log local {"from": 4, "to": 4}
+2026-11-02 15:12:32.572 [node3] info  Entradas replicadas desde node1 al log local {"from": 4, "to": 4}
+2026-11-02 15:12:32.574 [node1] info  Entradas replicadas en node2 {"from": 4, "matchIndex": 4, "to": 4}
+2026-11-02 15:12:32.575 [node1] info  Entrada aplicada a la State Machine {"index": 4, "ok": true, "term": 1, "type": "CREATE_USER"}
+2026-11-02 15:12:32.579 [node1] info  Entrada agregada al log local del Leader (aún NO committed) {"index": 5, "term": 1, "type": "DELETE_USER"}
+2026-11-02 15:12:32.581 [node2] info  Entradas replicadas desde node1 al log local {"from": 5, "to": 5}
+2026-11-02 15:12:32.581 [node2] info  commitIndex avanzado según el Leader {"from": 3, "to": 4}
+2026-11-02 15:12:32.581 [node3] info  Entradas replicadas desde node1 al log local {"from": 5, "to": 5}
+2026-11-02 15:12:32.581 [node3] info  commitIndex avanzado según el Leader {"from": 3, "to": 4}
+2026-11-02 15:12:32.583 [node1] info  Entradas replicadas en node2 {"from": 5, "matchIndex": 5, "to": 5}
+2026-11-02 15:12:32.583 [node1] info  Entradas COMMITTED por mayoría {"from": 5, "quorum": 2, "replicas": ["node1", "node2"], "to": 5}
+2026-11-02 15:12:32.584 [node2] info  Entrada aplicada a la State Machine {"index": 4, "ok": true, "term": 1, "type": "CREATE_USER"}
+2026-11-02 15:12:32.584 [node3] info  Entrada aplicada a la State Machine {"index": 4, "ok": true, "term": 1, "type": "CREATE_USER"}
+2026-11-02 15:12:32.585 [node1] info  Entradas replicadas en node3 {"from": 5, "matchIndex": 5, "to": 5}
+2026-11-02 15:12:32.586 [node1] info  Entrada aplicada a la State Machine {"index": 5, "ok": true, "term": 1, "type": "DELETE_USER"}
+2026-11-02 15:12:33.066 [node2] info  commitIndex avanzado según el Leader {"from": 4, "to": 5}
+2026-11-02 15:12:33.066 [node3] info  commitIndex avanzado según el Leader {"from": 4, "to": 5}
+2026-11-02 15:12:33.069 [node2] info  Entrada aplicada a la State Machine {"index": 5, "ok": true, "term": 1, "type": "DELETE_USER"}
+2026-11-02 15:12:33.069 [node3] info  Entrada aplicada a la State Machine {"index": 5, "ok": true, "term": 1, "type": "DELETE_USER"}
+2026-11-02 15:12:36.322 [node3] info  Election timeout vencido: FOLLOWER -> CANDIDATE, inicia elección {"lastLogIndex": 5, "lastLogTerm": 1, "term": 2}
+2026-11-02 15:12:36.350 [node2] info  Término actualizado 1 -> 2 {"reason": "RequestVote de node3"}
+2026-11-02 15:12:36.351 [node2] info  Voto concedido a node3 {"term": 2}
+2026-11-02 15:12:36.355 [node3] info  Voto recibido de node2 {"quorum": 2, "term": 2, "votes": 2}
+2026-11-02 15:12:36.356 [node3] info  CANDIDATE -> LEADER: mayoría alcanzada {"quorum": 2, "term": 2, "votes": ["node3", "node2"]}
+2026-11-02 15:12:36.358 [node3] warn  Peer node1 no responde {"error": "fetch failed"}
+2026-11-02 15:12:36.359 [node2] info  Leader reconocido: node3 {"term": 2}
+2026-11-02 15:12:36.360 [node2] info  Entradas replicadas desde node3 al log local {"from": 6, "to": 6}
+2026-11-02 15:12:36.361 [node3] info  Peer node2 accesible {"nextIndex": 6}
+2026-11-02 15:12:36.361 [node3] info  Entradas replicadas en node2 {"from": 6, "matchIndex": 6, "to": 6}
+2026-11-02 15:12:36.361 [node3] info  Entradas COMMITTED por mayoría {"from": 6, "quorum": 2, "replicas": ["node3", "node2"], "to": 6}
+2026-11-02 15:12:36.362 [node3] info  Entrada aplicada a la State Machine {"index": 6, "ok": true, "term": 2, "type": "NOOP"}
+2026-11-02 15:12:36.560 [node3] info  Entrada agregada al log local del Leader (aún NO committed) {"index": 7, "term": 2, "type": "CREATE_USER"}
+2026-11-02 15:12:36.565 [node2] info  Entradas replicadas desde node3 al log local {"from": 7, "to": 7}
+2026-11-02 15:12:36.565 [node2] info  commitIndex avanzado según el Leader {"from": 5, "to": 6}
+2026-11-02 15:12:36.567 [node2] info  Entrada aplicada a la State Machine {"index": 6, "ok": true, "term": 2, "type": "NOOP"}
+2026-11-02 15:12:36.567 [node3] info  Entradas replicadas en node2 {"from": 7, "matchIndex": 7, "to": 7}
+2026-11-02 15:12:36.567 [node3] info  Entradas COMMITTED por mayoría {"from": 7, "quorum": 2, "replicas": ["node3", "node2"], "to": 7}
+2026-11-02 15:12:36.569 [node3] info  Entrada aplicada a la State Machine {"index": 7, "ok": true, "term": 2, "type": "CREATE_USER"}
+2026-11-02 15:12:36.861 [node2] info  commitIndex avanzado según el Leader {"from": 6, "to": 7}
+2026-11-02 15:12:36.864 [node2] info  Entrada aplicada a la State Machine {"index": 7, "ok": true, "term": 2, "type": "CREATE_USER"}
+2026-11-02 15:12:37.072 [node3] info  Entrada agregada al log local del Leader (aún NO committed) {"index": 8, "term": 2, "type": "CREATE_USER"}
+2026-11-02 15:12:37.074 [node3] warn  Peer node2 no responde {"error": "fetch failed"}
+2026-11-02 15:12:42.073 [node3] warn  Entrada sin quorum dentro del timeout: no confirmada {"index": 8, "term": 2}
+2026-11-02 15:12:42.074 [node3] error Error en la operación: La entrada 8 no alcanzó quorum en 5000 ms: quedó en el log local del Leader SIN confirmar y no fue aplicada. Podría confirmarse más adelante si se recupera la mayoría. {"stack": "CommitTimeoutError: La entrada 8 no alcanzó quorum en 5000 ms: quedó en el log local del Leader SIN confirmar y no fue aplicada. Podría confirmarse más adelante si se recupera la mayoría.\n    at Timeout._onTimeout (file:///home/josu/UCH/programacion-distribuida/tp-4/raft/raft-node.js:422:18)\n    at listOnTimeout (node:internal/timers:685:17)\n    at process.processTimers (node:internal/timers:618:7)", "statusCode": 503}
+2026-11-02 15:12:42.489 [node1] info  MongoDB connected (tp4_node1)
+2026-11-02 15:12:42.504 [node1] info  Redis client connected successfully
+2026-11-02 15:12:42.510 [node1] info  Estado Raft recuperado desde almacenamiento local {"commitIndex": 5, "currentTerm": 1, "lastApplied": 5, "lastLogIndex": 5, "votedFor": "node1"}
+2026-11-02 15:12:42.510 [node1] info  Nodo iniciado como FOLLOWER {"electionTimeoutMs": 2815, "term": 1}
+2026-11-02 15:12:42.535 [node1] info  API HTTPS escuchando en https://localhost:3001
+2026-11-02 15:12:42.535 [node1] info  RPC interno Raft escuchando en http://127.0.0.1:4001
+2026-11-02 15:12:42.871 [node1] info  Término actualizado 1 -> 2 {"reason": "AppendEntries de node3"}
+2026-11-02 15:12:42.876 [node1] info  Leader reconocido: node3 {"term": 2}
+2026-11-02 15:12:42.882 [node1] info  Entradas replicadas desde node3 al log local {"from": 6, "to": 8}
+2026-11-02 15:12:42.882 [node1] info  commitIndex avanzado según el Leader {"from": 5, "to": 7}
+2026-11-02 15:12:42.884 [node1] info  Entrada aplicada a la State Machine {"index": 6, "ok": true, "term": 2, "type": "NOOP"}
+2026-11-02 15:12:42.884 [node3] info  Peer node1 accesible {"nextIndex": 6}
+2026-11-02 15:12:42.885 [node3] info  Entradas replicadas en node1 {"from": 6, "matchIndex": 8, "to": 8}
+2026-11-02 15:12:42.885 [node3] info  Entradas COMMITTED por mayoría {"from": 8, "quorum": 2, "replicas": ["node3", "node1"], "to": 8}
+2026-11-02 15:12:42.887 [node3] info  Entrada aplicada a la State Machine {"index": 8, "ok": true, "term": 2, "type": "CREATE_USER"}
+2026-11-02 15:12:42.888 [node1] info  Entrada aplicada a la State Machine {"index": 7, "ok": true, "term": 2, "type": "CREATE_USER"}
+2026-11-02 15:12:43.366 [node1] info  commitIndex avanzado según el Leader {"from": 7, "to": 8}
+2026-11-02 15:12:43.370 [node1] info  Entrada aplicada a la State Machine {"index": 8, "ok": true, "term": 2, "type": "CREATE_USER"}
+2026-11-02 15:12:44.113 [node2] info  MongoDB connected (tp4_node2)
+2026-11-02 15:12:44.126 [node2] info  Redis client connected successfully
+2026-11-02 15:12:44.132 [node2] info  Estado Raft recuperado desde almacenamiento local {"commitIndex": 7, "currentTerm": 2, "lastApplied": 7, "lastLogIndex": 7, "votedFor": "node3"}
+2026-11-02 15:12:44.133 [node2] info  Nodo iniciado como FOLLOWER {"electionTimeoutMs": 2669, "term": 2}
+2026-11-02 15:12:44.155 [node2] info  API HTTPS escuchando en https://localhost:3002
+2026-11-02 15:12:44.156 [node2] info  RPC interno Raft escuchando en http://127.0.0.1:4002
+2026-11-02 15:12:44.371 [node2] info  Leader reconocido: node3 {"term": 2}
+2026-11-02 15:12:44.380 [node2] info  Entradas replicadas desde node3 al log local {"from": 8, "to": 8}
+2026-11-02 15:12:44.380 [node2] info  commitIndex avanzado según el Leader {"from": 7, "to": 8}
+2026-11-02 15:12:44.385 [node3] info  Peer node2 accesible {"nextIndex": 8}
+2026-11-02 15:12:44.385 [node3] info  Entradas replicadas en node2 {"from": 8, "matchIndex": 8, "to": 8}
+2026-11-02 15:12:44.386 [node2] info  Entrada aplicada a la State Machine {"index": 8, "ok": true, "term": 2, "type": "CREATE_USER"}
+2026-11-02 15:12:44.777 [node3] info  Entrada agregada al log local del Leader (aún NO committed) {"index": 9, "term": 2, "type": "CREATE_USER"}
+2026-11-02 15:12:44.778 [node3] warn  Peer node1 no responde {"error": "fetch failed"}
+2026-11-02 15:12:44.780 [node2] info  Entradas replicadas desde node3 al log local {"from": 9, "to": 9}
+2026-11-02 15:12:44.781 [node3] info  Entradas replicadas en node2 {"from": 9, "matchIndex": 9, "to": 9}
+2026-11-02 15:12:44.781 [node3] info  Entradas COMMITTED por mayoría {"from": 9, "quorum": 2, "replicas": ["node3", "node2"], "to": 9}
+2026-11-02 15:12:44.782 [node3] info  Entrada aplicada a la State Machine {"index": 9, "ok": true, "term": 2, "type": "CREATE_USER"}
+2026-11-02 15:12:44.785 [node3] info  Entrada agregada al log local del Leader (aún NO committed) {"index": 10, "term": 2, "type": "CREATE_USER"}
+2026-11-02 15:12:44.787 [node2] info  Entradas replicadas desde node3 al log local {"from": 10, "to": 10}
+2026-11-02 15:12:44.788 [node2] info  commitIndex avanzado según el Leader {"from": 8, "to": 9}
+2026-11-02 15:12:44.789 [node3] info  Entradas replicadas en node2 {"from": 10, "matchIndex": 10, "to": 10}
+2026-11-02 15:12:44.789 [node3] info  Entradas COMMITTED por mayoría {"from": 10, "quorum": 2, "replicas": ["node3", "node2"], "to": 10}
+2026-11-02 15:12:44.790 [node2] info  Entrada aplicada a la State Machine {"index": 9, "ok": true, "term": 2, "type": "CREATE_USER"}
+2026-11-02 15:12:44.791 [node3] info  Entrada aplicada a la State Machine {"index": 10, "ok": true, "term": 2, "type": "CREATE_USER"}
+2026-11-02 15:12:44.868 [node2] info  commitIndex avanzado según el Leader {"from": 9, "to": 10}
+2026-11-02 15:12:44.871 [node2] info  Entrada aplicada a la State Machine {"index": 10, "ok": true, "term": 2, "type": "CREATE_USER"}
+2026-11-02 15:12:45.494 [node1] info  MongoDB connected (tp4_node1)
+2026-11-02 15:12:45.508 [node1] info  Redis client connected successfully
+2026-11-02 15:12:45.514 [node1] info  Estado Raft recuperado desde almacenamiento local {"commitIndex": 8, "currentTerm": 2, "lastApplied": 8, "lastLogIndex": 8, "votedFor": null}
+2026-11-02 15:12:45.514 [node1] info  Nodo iniciado como FOLLOWER {"electionTimeoutMs": 2747, "term": 2}
+2026-11-02 15:12:45.540 [node1] info  API HTTPS escuchando en https://localhost:3001
+2026-11-02 15:12:45.540 [node1] info  RPC interno Raft escuchando en http://127.0.0.1:4001
+2026-11-02 15:12:46.791 [node2] info  Election timeout vencido: FOLLOWER -> CANDIDATE, inicia elección {"lastLogIndex": 10, "lastLogTerm": 2, "term": 3}
+2026-11-02 15:12:46.818 [node1] info  Término actualizado 2 -> 3 {"reason": "RequestVote de node2"}
+2026-11-02 15:12:46.822 [node1] info  Voto concedido a node2 {"term": 3}
+2026-11-02 15:12:46.827 [node2] info  Voto recibido de node1 {"quorum": 2, "term": 3, "votes": 2}
+2026-11-02 15:12:46.827 [node2] info  CANDIDATE -> LEADER: mayoría alcanzada {"quorum": 2, "term": 3, "votes": ["node2", "node1"]}
+2026-11-02 15:12:46.830 [node2] warn  Peer node3 no responde {"error": "fetch failed"}
+2026-11-02 15:12:46.831 [node1] info  Leader reconocido: node2 {"term": 3}
+2026-11-02 15:12:46.831 [node1] info  Log atrasado respecto del Leader: falta la entrada previa 10 (lastLogIndex local = 8)
+2026-11-02 15:12:46.832 [node2] info  Peer node1 accesible {"nextIndex": 11}
+2026-11-02 15:12:46.832 [node2] warn  node1 rechazó AppendEntries por inconsistencia: se retrocede nextIndex {"nextIndex": "11 -> 9", "prevLogIndex": 10, "reason": "falta la entrada previa 10 (lastLogIndex local = 8)"}
+2026-11-02 15:12:46.840 [node1] info  Entradas replicadas desde node2 al log local {"from": 9, "to": 11}
+2026-11-02 15:12:46.840 [node1] info  commitIndex avanzado según el Leader {"from": 8, "to": 10}
+2026-11-02 15:12:46.844 [node2] info  Entradas replicadas en node1 {"from": 9, "matchIndex": 11, "to": 11}
+2026-11-02 15:12:46.844 [node2] info  Entradas COMMITTED por mayoría {"from": 11, "quorum": 2, "replicas": ["node2", "node1"], "to": 11}
+2026-11-02 15:12:46.845 [node1] info  Entrada aplicada a la State Machine {"index": 9, "ok": true, "term": 2, "type": "CREATE_USER"}
+2026-11-02 15:12:46.846 [node2] info  Entrada aplicada a la State Machine {"index": 11, "ok": true, "term": 3, "type": "NOOP"}
+2026-11-02 15:12:46.847 [node1] info  Entrada aplicada a la State Machine {"index": 10, "ok": true, "term": 2, "type": "CREATE_USER"}
+2026-11-02 15:12:47.333 [node1] info  commitIndex avanzado según el Leader {"from": 10, "to": 11}
+2026-11-02 15:12:47.336 [node1] info  Entrada aplicada a la State Machine {"index": 11, "ok": true, "term": 3, "type": "NOOP"}
+2026-11-02 15:12:47.957 [node3] info  MongoDB connected (tp4_node3)
+2026-11-02 15:12:47.971 [node3] info  Redis client connected successfully
+2026-11-02 15:12:47.977 [node3] info  Estado Raft recuperado desde almacenamiento local {"commitIndex": 10, "currentTerm": 2, "lastApplied": 10, "lastLogIndex": 10, "votedFor": "node3"}
+2026-11-02 15:12:47.977 [node3] info  Nodo iniciado como FOLLOWER {"electionTimeoutMs": 2502, "term": 2}
+2026-11-02 15:12:48.001 [node3] info  API HTTPS escuchando en https://localhost:3003
+2026-11-02 15:12:48.001 [node3] info  RPC interno Raft escuchando en http://127.0.0.1:4003
+2026-11-02 15:12:48.339 [node3] info  Término actualizado 2 -> 3 {"reason": "AppendEntries de node2"}
+2026-11-02 15:12:48.343 [node3] info  Leader reconocido: node2 {"term": 3}
+2026-11-02 15:12:48.350 [node3] info  Entradas replicadas desde node2 al log local {"from": 11, "to": 11}
+2026-11-02 15:12:48.350 [node3] info  commitIndex avanzado según el Leader {"from": 10, "to": 11}
+2026-11-02 15:12:48.352 [node2] info  Peer node3 accesible {"nextIndex": 11}
+2026-11-02 15:12:48.352 [node2] info  Entradas replicadas en node3 {"from": 11, "matchIndex": 11, "to": 11}
+2026-11-02 15:12:48.352 [node3] info  Entrada aplicada a la State Machine {"index": 11, "ok": true, "term": 3, "type": "NOOP"}
+2026-11-02 15:12:48.575 [node1] info  SIGTERM recibido: deteniendo node1
+2026-11-02 15:12:48.575 [node2] info  SIGTERM recibido: deteniendo node2
+2026-11-02 15:12:48.575 [node3] info  SIGTERM recibido: deteniendo node3
+2026-11-02 15:12:49.036 [node1] info  MongoDB connected (tp4_node1)
+2026-11-02 15:12:49.036 [node3] info  MongoDB connected (tp4_node3)
+2026-11-02 15:12:49.037 [node2] info  MongoDB connected (tp4_node2)
+2026-11-02 15:12:49.052 [node3] info  Redis client connected successfully
+2026-11-02 15:12:49.053 [node1] info  Redis client connected successfully
+2026-11-02 15:12:49.057 [node2] info  Redis client connected successfully
+2026-11-02 15:12:49.060 [node3] info  Estado Raft recuperado desde almacenamiento local {"commitIndex": 11, "currentTerm": 3, "lastApplied": 11, "lastLogIndex": 11, "votedFor": null}
+2026-11-02 15:12:49.060 [node3] info  Nodo iniciado como FOLLOWER {"electionTimeoutMs": 2510, "term": 3}
+2026-11-02 15:12:49.061 [node1] info  Estado Raft recuperado desde almacenamiento local {"commitIndex": 11, "currentTerm": 3, "lastApplied": 11, "lastLogIndex": 11, "votedFor": "node2"}
+2026-11-02 15:12:49.061 [node1] info  Nodo iniciado como FOLLOWER {"electionTimeoutMs": 2779, "term": 3}
+2026-11-02 15:12:49.064 [node2] info  Estado Raft recuperado desde almacenamiento local {"commitIndex": 11, "currentTerm": 3, "lastApplied": 11, "lastLogIndex": 11, "votedFor": "node2"}
+2026-11-02 15:12:49.065 [node2] info  Nodo iniciado como FOLLOWER {"electionTimeoutMs": 1553, "term": 3}
+2026-11-02 15:12:49.089 [node1] info  API HTTPS escuchando en https://localhost:3001
+2026-11-02 15:12:49.089 [node1] info  RPC interno Raft escuchando en http://127.0.0.1:4001
+2026-11-02 15:12:49.090 [node3] info  API HTTPS escuchando en https://localhost:3003
+2026-11-02 15:12:49.090 [node3] info  RPC interno Raft escuchando en http://127.0.0.1:4003
+2026-11-02 15:12:49.092 [node2] info  API HTTPS escuchando en https://localhost:3002
+2026-11-02 15:12:49.092 [node2] info  RPC interno Raft escuchando en http://127.0.0.1:4002
+2026-11-02 15:12:50.618 [node2] info  Election timeout vencido: FOLLOWER -> CANDIDATE, inicia elección {"lastLogIndex": 11, "lastLogTerm": 3, "term": 4}
+2026-11-02 15:12:50.651 [node1] info  Término actualizado 3 -> 4 {"reason": "RequestVote de node2"}
+2026-11-02 15:12:50.651 [node3] info  Término actualizado 3 -> 4 {"reason": "RequestVote de node2"}
+2026-11-02 15:12:50.655 [node1] info  Voto concedido a node2 {"term": 4}
+2026-11-02 15:12:50.656 [node3] info  Voto concedido a node2 {"term": 4}
+2026-11-02 15:12:50.660 [node2] info  Voto recibido de node1 {"quorum": 2, "term": 4, "votes": 2}
+2026-11-02 15:12:50.660 [node2] info  CANDIDATE -> LEADER: mayoría alcanzada {"quorum": 2, "term": 4, "votes": ["node2", "node1"]}
+2026-11-02 15:12:50.669 [node1] info  Leader reconocido: node2 {"term": 4}
+2026-11-02 15:12:50.669 [node3] info  Leader reconocido: node2 {"term": 4}
+2026-11-02 15:12:50.676 [node1] info  Entradas replicadas desde node2 al log local {"from": 12, "to": 12}
+2026-11-02 15:12:50.676 [node3] info  Entradas replicadas desde node2 al log local {"from": 12, "to": 12}
+2026-11-02 15:12:50.678 [node2] info  Peer node3 accesible {"nextIndex": 12}
+2026-11-02 15:12:50.678 [node2] info  Entradas replicadas en node3 {"from": 12, "matchIndex": 12, "to": 12}
+2026-11-02 15:12:50.678 [node2] info  Entradas COMMITTED por mayoría {"from": 12, "quorum": 2, "replicas": ["node2", "node3"], "to": 12}
+2026-11-02 15:12:50.680 [node2] info  Peer node1 accesible {"nextIndex": 12}
+2026-11-02 15:12:50.681 [node2] info  Entradas replicadas en node1 {"from": 12, "matchIndex": 12, "to": 12}
+2026-11-02 15:12:50.681 [node2] info  Entrada aplicada a la State Machine {"index": 12, "ok": true, "term": 4, "type": "NOOP"}
+2026-11-02 15:12:51.247 [node1] info  commitIndex avanzado según el Leader {"from": 11, "to": 12}
+2026-11-02 15:12:51.247 [node3] info  commitIndex avanzado según el Leader {"from": 11, "to": 12}
+2026-11-02 15:12:51.250 [node1] info  Entrada aplicada a la State Machine {"index": 12, "ok": true, "term": 4, "type": "NOOP"}
+2026-11-02 15:12:51.251 [node3] info  Entrada aplicada a la State Machine {"index": 12, "ok": true, "term": 4, "type": "NOOP"}
+2026-11-02 15:12:51.281 [node2] info  Entrada agregada al log local del Leader (aún NO committed) {"index": 13, "term": 4, "type": "CREATE_USER"}
+2026-11-02 15:12:51.283 [node1] info  Entradas replicadas desde node2 al log local {"from": 13, "to": 13}
+2026-11-02 15:12:51.284 [node2] info  Entradas replicadas en node1 {"from": 13, "matchIndex": 13, "to": 13}
+2026-11-02 15:12:51.284 [node2] info  Entradas COMMITTED por mayoría {"from": 13, "quorum": 2, "replicas": ["node2", "node1"], "to": 13}
+2026-11-02 15:12:51.284 [node3] info  Entradas replicadas desde node2 al log local {"from": 13, "to": 13}
+2026-11-02 15:12:51.286 [node2] info  Entradas replicadas en node3 {"from": 13, "matchIndex": 13, "to": 13}
+2026-11-02 15:12:51.288 [node2] info  Entrada aplicada a la State Machine {"index": 13, "ok": true, "term": 4, "type": "CREATE_USER"}
+2026-11-02 15:12:51.399 [node2] warn  Error en la operación: Could not acquire lock for user savings update {"statusCode": 409}
+2026-11-02 15:12:51.747 [node1] info  commitIndex avanzado según el Leader {"from": 12, "to": 13}
+2026-11-02 15:12:51.747 [node3] info  commitIndex avanzado según el Leader {"from": 12, "to": 13}
+2026-11-02 15:12:51.754 [node1] info  Entrada aplicada a la State Machine {"index": 13, "ok": true, "term": 4, "type": "CREATE_USER"}
+2026-11-02 15:12:51.754 [node3] info  Entrada aplicada a la State Machine {"index": 13, "ok": true, "term": 4, "type": "CREATE_USER"}
+2026-11-02 15:12:52.296 [node2] info  Entrada agregada al log local del Leader (aún NO committed) {"index": 14, "term": 4, "type": "SET_SAVINGS"}
+2026-11-02 15:12:52.300 [node1] info  Entradas replicadas desde node2 al log local {"from": 14, "to": 14}
+2026-11-02 15:12:52.300 [node3] info  Entradas replicadas desde node2 al log local {"from": 14, "to": 14}
+2026-11-02 15:12:52.301 [node2] info  Entradas replicadas en node1 {"from": 14, "matchIndex": 14, "to": 14}
+2026-11-02 15:12:52.302 [node2] info  Entradas COMMITTED por mayoría {"from": 14, "quorum": 2, "replicas": ["node2", "node1"], "to": 14}
+2026-11-02 15:12:52.305 [node2] info  Entradas replicadas en node3 {"from": 14, "matchIndex": 14, "to": 14}
+2026-11-02 15:12:52.308 [node2] info  Entrada aplicada a la State Machine {"index": 14, "ok": true, "term": 4, "type": "SET_SAVINGS"}
+2026-11-02 15:12:52.748 [node1] info  commitIndex avanzado según el Leader {"from": 13, "to": 14}
+2026-11-02 15:12:52.748 [node3] info  commitIndex avanzado según el Leader {"from": 13, "to": 14}
+2026-11-02 15:12:52.754 [node1] info  Entrada aplicada a la State Machine {"index": 14, "ok": true, "term": 4, "type": "SET_SAVINGS"}
+2026-11-02 15:12:52.755 [node3] info  Entrada aplicada a la State Machine {"index": 14, "ok": true, "term": 4, "type": "SET_SAVINGS"}
+2026-11-02 15:12:53.315 [node2] info  Entrada agregada al log local del Leader (aún NO committed) {"index": 15, "term": 4, "type": "SET_SAVINGS"}
+2026-11-02 15:12:53.318 [node1] info  Entradas replicadas desde node2 al log local {"from": 15, "to": 15}
+2026-11-02 15:12:53.319 [node2] info  Entradas replicadas en node1 {"from": 15, "matchIndex": 15, "to": 15}
+2026-11-02 15:12:53.319 [node2] info  Entradas COMMITTED por mayoría {"from": 15, "quorum": 2, "replicas": ["node2", "node1"], "to": 15}
+2026-11-02 15:12:53.319 [node3] info  Entradas replicadas desde node2 al log local {"from": 15, "to": 15}
+2026-11-02 15:12:53.321 [node2] info  Entradas replicadas en node3 {"from": 15, "matchIndex": 15, "to": 15}
+2026-11-02 15:12:53.323 [node2] info  Entrada aplicada a la State Machine {"index": 15, "ok": true, "term": 4, "type": "SET_SAVINGS"}
+2026-11-02 15:12:53.747 [node1] info  commitIndex avanzado según el Leader {"from": 14, "to": 15}
+2026-11-02 15:12:53.747 [node3] info  commitIndex avanzado según el Leader {"from": 14, "to": 15}
+2026-11-02 15:12:53.751 [node1] info  Entrada aplicada a la State Machine {"index": 15, "ok": true, "term": 4, "type": "SET_SAVINGS"}
+2026-11-02 15:12:53.751 [node3] info  Entrada aplicada a la State Machine {"index": 15, "ok": true, "term": 4, "type": "SET_SAVINGS"}
+2026-11-02 15:12:53.830 [node1] info  SIGTERM recibido: deteniendo node1
+2026-11-02 15:12:53.830 [node2] info  SIGTERM recibido: deteniendo node2
+2026-11-02 15:12:53.830 [node3] info  SIGTERM recibido: deteniendo node3
