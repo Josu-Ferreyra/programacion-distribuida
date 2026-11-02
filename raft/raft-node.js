@@ -24,7 +24,7 @@ const randomBetween = (min, max) =>
 // nunca observa un estado intermedio (p. ej. rol LEADER con un término nuevo).
 // Las llamadas de red se hacen fuera del mutex.
 export class RaftNode {
-  constructor({ config, stateMachine, rpc }) {
+  constructor({ config, storage, stateMachine, rpc }) {
     this.id = config.id;
     this.apiUrl = config.apiUrl;
     this.raftUrl = config.raftUrl;
@@ -33,11 +33,12 @@ export class RaftNode {
     this.quorum = Math.floor(config.clusterSize / 2) + 1;
     this.timing = config.timing;
 
+    this.storage = storage;
     this.stateMachine = stateMachine;
     this.rpc = rpc;
     this.mutex = new Mutex();
 
-    // Estado del protocolo (por ahora sólo en memoria).
+    // Estado persistente (se carga en start()).
     this.currentTerm = 0;
     this.votedFor = null;
     this.log = [{ index: 0, term: 0, command: { type: COMMANDS.NOOP } }]; // centinela
@@ -68,6 +69,22 @@ export class RaftNode {
   // ---------------------------------------------------------------- ciclo de vida
 
   async start() {
+    const persisted = await this.storage.load();
+    this.currentTerm = persisted.currentTerm;
+    this.votedFor = persisted.votedFor;
+    this.log.push(...persisted.entries);
+    this.commitIndex = Math.min(persisted.commitIndex, this.lastLogIndex);
+    this.lastApplied = Math.min(persisted.lastApplied, this.commitIndex);
+
+    logger.info("Estado Raft recuperado desde almacenamiento local", {
+      currentTerm: this.currentTerm,
+      votedFor: this.votedFor,
+      lastLogIndex: this.lastLogIndex,
+      commitIndex: this.commitIndex,
+      lastApplied: this.lastApplied,
+    });
+
+    await this.#applyCommitted();
     this.#resetElectionTimer();
     logger.info(`Nodo iniciado como ${this.role}`, {
       term: this.currentTerm,
@@ -219,6 +236,7 @@ export class RaftNode {
           : `Election timeout vencido: ${previousRole} -> CANDIDATE, inicia elección`,
         { term: this.currentTerm, lastLogIndex: this.lastLogIndex, lastLogTerm: this.lastLogTerm },
       );
+      await this.storage.saveTermAndVote(this.currentTerm, this.votedFor);
 
       return {
         term: this.currentTerm,
@@ -293,8 +311,11 @@ export class RaftNode {
         return { term: this.currentTerm, voteGranted: false, reason };
       }
 
+      // El voto se persiste ANTES de responder: tras un reinicio el nodo debe
+      // recordar que ya votó en este término.
       this.votedFor = candidateId;
       this.#resetElectionTimer();
+      await this.storage.saveTermAndVote(this.currentTerm, this.votedFor);
       logger.info(`Voto concedido a ${candidateId}`, { term: this.currentTerm });
       return { term: this.currentTerm, voteGranted: true };
     });
@@ -332,6 +353,7 @@ export class RaftNode {
       term: this.currentTerm,
       command: { type: COMMANDS.NOOP, leaderId: this.id },
     };
+    await this.storage.appendEntries([noop]);
     this.log.push(noop);
 
     this.heartbeatTimer = setInterval(
@@ -369,6 +391,7 @@ export class RaftNode {
 
     if (termChanged) {
       logger.info(`Término actualizado ${previousTerm} -> ${newTerm}`, { reason });
+      await this.storage.saveTermAndVote(this.currentTerm, this.votedFor);
     }
   }
 
@@ -380,6 +403,9 @@ export class RaftNode {
 
       const entry = { index: this.lastLogIndex + 1, term: this.currentTerm, command };
 
+      // Se persiste ANTES de exponerla al loop de replicación: el Leader se
+      // cuenta a sí mismo como réplica al calcular la mayoría.
+      await this.storage.appendEntries([entry]);
       this.log.push(entry);
 
       const result = new Promise((resolve, reject) => {
@@ -491,9 +517,11 @@ export class RaftNode {
         return state.nextIndex <= this.lastLogIndex;
       }
 
-      // Rechazo por falta de continuidad: retroceder el punto de envío de a
-      // una posición y reintentar hasta encontrar la entrada en común.
-      const newNextIndex = Math.max(1, state.nextIndex - 1);
+      // Rechazo por falta de continuidad: retroceder el punto de envío y
+      // reintentar. `matchHint` (último índice que el follower podría tener en
+      // común) evita retroceder de a uno cuando al follower le faltan entradas.
+      const hint = response.matchHint ?? prevLogIndex - 1;
+      const newNextIndex = Math.max(1, Math.min(state.nextIndex - 1, hint + 1));
       logger.warn(`${peer.id} rechazó AppendEntries por inconsistencia: se retrocede nextIndex`, {
         prevLogIndex,
         reason: response.reason,
@@ -536,6 +564,7 @@ export class RaftNode {
           replicas,
           quorum: this.quorum,
         });
+        await this.storage.saveCommitIndex(this.commitIndex);
         this.#applyCommitted();
         return;
       }
@@ -573,12 +602,12 @@ export class RaftNode {
       if (prevLogIndex > this.lastLogIndex) {
         const reason = `falta la entrada previa ${prevLogIndex} (lastLogIndex local = ${this.lastLogIndex})`;
         logger.info(`Log atrasado respecto del Leader: ${reason}`);
-        return { term, success: false, reason };
+        return { term, success: false, reason, matchHint: this.lastLogIndex };
       }
       if (this.log[prevLogIndex].term !== prevLogTerm) {
         const reason = `término distinto en la entrada ${prevLogIndex} (local ${this.log[prevLogIndex].term}, leader ${prevLogTerm})`;
         logger.info(`Log inconsistente con el Leader: ${reason}`);
-        return { term, success: false, reason };
+        return { term, success: false, reason, matchHint: prevLogIndex - 1 };
       }
 
       // Agregar entradas nuevas; si una existente entra en conflicto (mismo
@@ -596,6 +625,7 @@ export class RaftNode {
             to: this.lastLogIndex,
           });
           this.log.length = entry.index;
+          await this.storage.truncateFrom(entry.index);
           newEntries = entries.slice(i);
           break;
         }
@@ -603,6 +633,7 @@ export class RaftNode {
 
       if (newEntries.length > 0) {
         this.log.push(...newEntries);
+        await this.storage.appendEntries(newEntries);
         logger.info(`Entradas replicadas desde ${leaderId} al log local`, {
           from: newEntries[0].index,
           to: this.lastLogIndex,
@@ -621,6 +652,7 @@ export class RaftNode {
             to: newCommitIndex,
           });
           this.commitIndex = newCommitIndex;
+          await this.storage.saveCommitIndex(this.commitIndex);
           this.#applyCommitted();
         }
       }
@@ -647,6 +679,7 @@ export class RaftNode {
           const entry = this.log[this.lastApplied + 1];
           const result = await this.stateMachine.apply(entry);
           this.lastApplied = entry.index;
+          await this.storage.saveLastApplied(this.lastApplied);
 
           logger.info("Entrada aplicada a la State Machine", {
             index: entry.index,
