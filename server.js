@@ -7,6 +7,7 @@ import { createSSLServer } from "./config/ssl.js";
 import { createApp } from "./app.js";
 import { getRaftNodeConfig } from "./config/cluster.js";
 import { initRaftNode } from "./raft/index.js";
+import { startRaftRpcServer } from "./raft/rpc-server.js";
 import { logger } from "./utils/logger.js";
 
 const NODE_ID = process.argv[2] || process.env.NODE_ID;
@@ -26,12 +27,16 @@ logger.info(`Iniciando ${NODE_CONFIG.id}`, {
 await connectDB(NODE_CONFIG.mongoUri);
 await connectRedis();
 
-initRaftNode(NODE_CONFIG);
+const raftNode = initRaftNode(NODE_CONFIG);
+await raftNode.start();
 
+const rpcServer = startRaftRpcServer(raftNode, NODE_CONFIG);
 const apiServer = createSSLServer(createApp(NODE_CONFIG), NODE_CONFIG.apiPort);
 
 async function shutdown(signal) {
   logger.info(`${signal} recibido: deteniendo ${NODE_CONFIG.id}`);
+  raftNode.stop();
+  rpcServer.close();
   apiServer.close();
   await Promise.allSettled([
     mongoose.disconnect(),
